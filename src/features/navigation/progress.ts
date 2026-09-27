@@ -1,8 +1,9 @@
+import { roadNameAtDistance } from '@/features/routing/segments';
 import type { Coordinate } from '@/types/location';
 import type { RouteAlternative, RouteStep } from '@/types/route';
-import { distanceMeters, progressAlongRoute, type RouteProgress } from '@/utils/geo';
+import { matchToRoute, type RouteMatch, type RouteMatchHint } from '@/utils/geo';
 
-export type NavigationSnapshot = RouteProgress & {
+export type NavigationSnapshot = RouteMatch & {
   remainingSeconds: number;
   eta: number;
   instruction: string;
@@ -10,26 +11,39 @@ export type NavigationSnapshot = RouteProgress & {
   followingInstruction?: string;
   maneuverType?: string;
   maneuverModifier?: string;
+  roadName?: string;
+  match: RouteMatch;
 };
+
+let remembered: { routeId: string; hint: RouteMatchHint } | null = null;
 
 export function navigationSnapshot(
   location: Coordinate,
   speedMps: number | null,
   route: RouteAlternative,
   now = Date.now(),
+  hint?: RouteMatchHint | null,
 ): NavigationSnapshot {
-  const progress = progressAlongRoute(location, route.geometry);
-  const remainingSeconds = estimateRemainingSeconds(progress.remainingMeters, speedMps, route.distanceMeters, route.durationSeconds);
-  const upcoming = upcomingStep(location, route.steps);
+  const previous = hint ?? (remembered?.routeId === route.id ? remembered.hint : null);
+  const match = matchToRoute(location, route.geometry, previous);
+  remembered = {
+    routeId: route.id,
+    hint: { segmentIndex: match.segmentIndex, traveledMeters: match.traveledMeters },
+  };
+  const remainingSeconds = estimateRemainingSeconds(match.remainingMeters, speedMps, route.distanceMeters, route.durationSeconds);
+  const upcoming = upcomingStep(match.traveledMeters, route.steps);
+  const roadName = roadNameAtDistance(route.steps, match.traveledMeters);
   return {
-    ...progress,
+    ...match,
+    match,
     remainingSeconds,
     eta: now + remainingSeconds * 1000,
-    instruction: upcoming?.step.instruction ?? 'Continue on the route',
-    instructionDistanceMeters: upcoming?.distanceMeters ?? progress.remainingMeters,
-    followingInstruction: upcoming?.following?.instruction,
-    maneuverType: upcoming?.step.maneuverType,
-    maneuverModifier: upcoming?.step.maneuverModifier,
+    instruction: match.offRoute ? 'Off the planned route' : (upcoming?.step.instruction ?? 'Continue on the route'),
+    instructionDistanceMeters: match.offRoute ? match.crossTrackMeters : (upcoming?.distanceMeters ?? match.remainingMeters),
+    followingInstruction: match.offRoute ? undefined : upcoming?.following?.instruction,
+    maneuverType: match.offRoute ? undefined : upcoming?.step.maneuverType,
+    maneuverModifier: match.offRoute ? undefined : upcoming?.step.maneuverModifier,
+    roadName,
   };
 }
 
@@ -44,23 +58,21 @@ function estimateRemainingSeconds(
   return remainingMeters * pace;
 }
 
-function upcomingStep(point: Coordinate, steps: RouteStep[]): { step: RouteStep; distanceMeters: number; following?: RouteStep } | null {
+function upcomingStep(traveledMeters: number, steps: RouteStep[]): { step: RouteStep; distanceMeters: number; following?: RouteStep } | null {
   if (steps.length === 0) return null;
-  let closest = 0;
-  let closestDistance = Number.POSITIVE_INFINITY;
-  steps.forEach((step, index) => {
-    const distance = distanceMeters(point, step.location);
-    if (distance < closestDistance) {
-      closest = index;
-      closestDistance = distance;
+  let cursor = 0;
+  for (let index = 0; index < steps.length; index += 1) {
+    const step = steps[index];
+    if (!step) continue;
+    const end = cursor + Math.max(0, step.distanceMeters);
+    if (traveledMeters < end - 15 || index === steps.length - 1) {
+      return {
+        step,
+        distanceMeters: Math.max(0, end - traveledMeters),
+        following: steps[index + 1],
+      };
     }
-  });
-  const index = closestDistance < 40 && closest < steps.length - 1 ? closest + 1 : closest;
-  const step = steps[index];
-  if (!step) return null;
-  return {
-    step,
-    distanceMeters: distanceMeters(point, step.location),
-    following: steps[index + 1],
-  };
+    cursor = end;
+  }
+  return null;
 }

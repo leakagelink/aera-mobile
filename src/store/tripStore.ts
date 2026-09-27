@@ -2,14 +2,18 @@ import { create } from 'zustand';
 
 import { localTripRepository, type TripRepository } from '@/data/tripRepository';
 import { computeTripMetrics } from '@/features/trips/metrics';
+import type { Coordinate } from '@/types/location';
 import type { Trip, TripDraft, TripSample } from '@/types/trip';
 import { AppError } from '@/utils/errors';
+import { matchToRoute } from '@/utils/geo';
 import { createId } from '@/utils/id';
 
 type StartDraftInput = {
   originName: string;
   destinationName: string;
   routeSummary: string;
+  routeProvider?: string;
+  plannedGeometry?: Coordinate[];
   initialSample: TripSample;
 };
 
@@ -59,6 +63,8 @@ export const useTripStore = create<TripState>((set, get) => ({
       originName: input.originName,
       destinationName: input.destinationName,
       routeSummary: input.routeSummary,
+      routeProvider: input.routeProvider,
+      plannedGeometry: input.plannedGeometry,
       samples: [input.initialSample],
     };
     await repository.saveDraft(draft);
@@ -100,6 +106,9 @@ export const useTripStore = create<TripState>((set, get) => ({
 
 function finalize(draft: TripDraft, endedAt: number, recovered: boolean): Trip {
   const metrics = computeTripMetrics(draft.samples, draft.startedAt, endedAt);
+  const last = draft.samples[draft.samples.length - 1];
+  const planned = draft.plannedGeometry ?? [];
+  const routeProgress = last && planned.length >= 2 ? matchToRoute(last, planned).fraction : undefined;
   return {
     id: draft.id,
     startedAt: draft.startedAt,
@@ -109,10 +118,15 @@ function finalize(draft: TripDraft, endedAt: number, recovered: boolean): Trip {
     averageSpeedMps: metrics.averageSpeedMps,
     maxSpeedMps: metrics.maxSpeedMps,
     sampleCount: metrics.sampleCount,
+    movingTimeSeconds: metrics.movingTimeSeconds,
+    stoppedTimeSeconds: metrics.stoppedTimeSeconds,
     samples: draft.samples,
     originName: draft.originName,
     destinationName: draft.destinationName,
     routeSummary: draft.routeSummary,
+    routeProvider: draft.routeProvider,
+    plannedGeometry: planned.length >= 2 ? planned : undefined,
+    routeProgress,
     recovered,
   };
 }

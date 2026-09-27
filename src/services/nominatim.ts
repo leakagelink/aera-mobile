@@ -30,7 +30,7 @@ let queue: Promise<unknown> = Promise.resolve();
 
 function headers(): Record<string, string> {
   return {
-    'User-Agent': env.nominatimUserAgent,
+    'User-Agent': env.geocodingUserAgent,
     Referer: 'https://github.com/leakagelink/aera-mobile',
   };
 }
@@ -78,7 +78,7 @@ export async function searchPlaces(query: string, signal?: AbortSignal): Promise
   const cached = cache.get(key);
   if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.places;
 
-  const url = new URL('/search', env.nominatimBaseUrl);
+  const url = new URL('/search', env.geocodingBaseUrl);
   url.searchParams.set('q', trimmed);
   url.searchParams.set('format', 'jsonv2');
   url.searchParams.set('addressdetails', '1');
@@ -107,7 +107,7 @@ export async function reverseGeocode(coordinate: Coordinate, signal?: AbortSigna
   const cached = cache.get(key);
   if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.places[0] ?? null;
 
-  const url = new URL('/reverse', env.nominatimBaseUrl);
+  const url = new URL('/reverse', env.geocodingBaseUrl);
   url.searchParams.set('lat', String(coordinate.latitude));
   url.searchParams.set('lon', String(coordinate.longitude));
   url.searchParams.set('format', 'jsonv2');

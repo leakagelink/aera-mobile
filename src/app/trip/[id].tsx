@@ -40,13 +40,23 @@ export default function TripDetailScreen() {
     <ScrollView style={[styles.fill, { backgroundColor: theme.colors.background }]} contentContainerStyle={styles.content}>
       <ScreenHeader title={`${trip.originName} → ${trip.destinationName}`} subtitle={`${formatDay(trip.startedAt)} · ${formatClock(trip.startedAt)}`} onBack={() => router.back()} />
       <View style={styles.map}>
-        <AeraMap ref={mapRef} routes={[{ id: trip.id, coordinates: trip.samples, selected: true }]} />
+        <AeraMap
+          ref={mapRef}
+          routes={[
+            ...(trip.plannedGeometry && trip.plannedGeometry.length > 1
+              ? [{ id: `${trip.id}-planned`, coordinates: trip.plannedGeometry, selected: false }]
+              : []),
+            { id: trip.id, coordinates: trip.samples, selected: true },
+          ]}
+        />
       </View>
       <View style={styles.metrics}>
         <MetricCard label="Distance" value={formatDistance(trip.distanceMeters, units)} />
         <MetricCard label="Duration" value={formatDuration(trip.durationSeconds)} />
         <MetricCard label="Average speed" value={formatSpeed(trip.averageSpeedMps, units)} unit={speedUnit(units)} />
         <MetricCard label="Max speed" value={formatSpeed(trip.maxSpeedMps, units)} unit={speedUnit(units)} />
+        {trip.movingTimeSeconds !== undefined ? <MetricCard label="Moving" value={formatDuration(trip.movingTimeSeconds)} /> : null}
+        {trip.stoppedTimeSeconds !== undefined ? <MetricCard label="Stopped" value={formatDuration(trip.stoppedTimeSeconds)} /> : null}
       </View>
       <View style={[styles.summary, { backgroundColor: theme.colors.surface }]}>
         <AppText size={16} weight="semibold">
@@ -59,7 +69,9 @@ export default function TripDetailScreen() {
           Started {formatClock(trip.startedAt)} · Ended {formatClock(trip.endedAt)}
         </AppText>
         <AppText size={13} color={theme.colors.mutedForeground}>
-          {trip.sampleCount} location samples{trip.recovered ? ' · saved after the app closed' : ''}
+          {trip.sampleCount} location samples
+          {trip.routeProgress !== undefined ? ` · ${Math.round(trip.routeProgress * 100)}% of the planned route` : ''}
+          {trip.recovered ? ' · saved after the app closed' : ''}
         </AppText>
       </View>
     </ScrollView>

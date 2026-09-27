@@ -15,9 +15,10 @@ export function useTripRecorder(active: boolean): void {
       timestamp: location.timestamp,
       latitude: location.latitude,
       longitude: location.longitude,
+      accuracy: location.accuracy,
       speed: location.speed,
       heading: location.heading,
-      accuracy: location.accuracy,
+      altitude: location.altitude,
     });
   }, [active, location]);
 }

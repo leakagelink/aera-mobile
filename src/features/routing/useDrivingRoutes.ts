@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
-import { fetchDrivingRoutes } from '@/services/osrm';
+import { routingProvider } from '@/services/providers';
 import { useLocationStore } from '@/store/locationStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { AppError } from '@/utils/errors';
@@ -25,7 +25,7 @@ export function useDrivingRoutes(enabled: boolean) {
       if (distanceMeters(current, place) < 25) {
         throw new AppError('Choose a destination farther from where you are.', 'invalid');
       }
-      return fetchDrivingRoutes(current, place, signal);
+      return routingProvider().calculateRoute(current, place, signal);
     },
   });
 

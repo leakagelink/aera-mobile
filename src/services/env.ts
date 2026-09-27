@@ -19,7 +19,12 @@ function readText(value: string | undefined, fallback: string): string {
 
 export const env = {
   mapStyleUrl: readUrl(process.env.EXPO_PUBLIC_MAP_STYLE_URL, DEFAULT_MAP_STYLE),
-  nominatimBaseUrl: readUrl(process.env.EXPO_PUBLIC_NOMINATIM_BASE_URL, DEFAULT_NOMINATIM),
-  nominatimUserAgent: readText(process.env.EXPO_PUBLIC_NOMINATIM_USER_AGENT, DEFAULT_USER_AGENT),
-  osrmBaseUrl: readUrl(process.env.EXPO_PUBLIC_OSRM_BASE_URL, DEFAULT_OSRM),
+  geocodingBaseUrl: readUrl(
+    process.env.EXPO_PUBLIC_GEOCODING_BASE_URL ?? process.env.EXPO_PUBLIC_NOMINATIM_BASE_URL,
+    DEFAULT_NOMINATIM,
+  ),
+  geocodingProvider: readText(process.env.EXPO_PUBLIC_GEOCODING_PROVIDER, 'nominatim'),
+  geocodingUserAgent: readText(process.env.EXPO_PUBLIC_NOMINATIM_USER_AGENT, DEFAULT_USER_AGENT),
+  routingBaseUrl: readUrl(process.env.EXPO_PUBLIC_ROUTING_BASE_URL ?? process.env.EXPO_PUBLIC_OSRM_BASE_URL, DEFAULT_OSRM),
+  routingProvider: readText(process.env.EXPO_PUBLIC_ROUTING_PROVIDER, 'osrm'),
 };

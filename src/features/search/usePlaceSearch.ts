@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
 import { readRecentPlaces, rememberPlace } from '@/data/searchHistory';
-import { searchPlaces } from '@/services/nominatim';
+import { placeSearchProvider } from '@/services/providers';
 import type { Place } from '@/types/place';
 import { useDebouncedValue } from '@/utils/useDebouncedValue';
 
@@ -10,7 +10,7 @@ export function usePlaceSearch(query: string) {
   const debounced = useDebouncedValue(query.trim(), 500);
   return useQuery({
     queryKey: ['places', debounced.toLowerCase()],
-    queryFn: ({ signal }) => searchPlaces(debounced, signal),
+    queryFn: ({ signal }) => placeSearchProvider().search(debounced, signal),
     enabled: debounced.length >= 2,
     staleTime: 60_000,
   });

@@ -4,7 +4,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 
 import { lineCollection, pointFeature } from '@/components/map/geojson';
 import { ErrorState } from '@/components/ui/States';
-import { getMapStyleUrl } from '@/services/mapStyle';
+import { mapStyleProvider } from '@/services/providers';
 import type { Coordinate } from '@/types/location';
 import { usePrefersReducedMotion } from '@/theme/ReducedMotion';
 import { useTheme } from '@/theme/useTheme';
@@ -17,7 +17,7 @@ export type MapRouteLine = {
 };
 
 export type AeraMapHandle = {
-  recenter: (longitude: number, latitude: number, zoom?: number) => void;
+  recenter: (longitude: number, latitude: number, zoom?: number, bearing?: number) => void;
   fit: (coordinates: Coordinate[]) => void;
 };
 
@@ -37,9 +37,14 @@ export const AeraMap = forwardRef<AeraMapHandle, Props>(function AeraMap({ user,
   const [failed, setFailed] = useState(false);
 
   useImperativeHandle(ref, () => ({
-    recenter(longitude, latitude, zoom = 16) {
+    recenter(longitude, latitude, zoom = 16, bearing) {
       const duration = reduced ? 0 : 450;
-      cameraRef.current?.easeTo({ center: [longitude, latitude], zoom, duration });
+      cameraRef.current?.easeTo({
+        center: [longitude, latitude],
+        zoom,
+        duration,
+        ...(typeof bearing === 'number' && Number.isFinite(bearing) ? { bearing } : {}),
+      });
     },
     fit(coordinates) {
       const bounds = paddedBounds(coordinates);
@@ -79,7 +84,7 @@ export const AeraMap = forwardRef<AeraMapHandle, Props>(function AeraMap({ user,
       <Map
         key={attempt}
         style={styles.fill}
-        mapStyle={getMapStyleUrl()}
+        mapStyle={mapStyleProvider().styleUrl()}
         compass
         logo
         attribution

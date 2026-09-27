@@ -39,6 +39,7 @@ function projectSegment(point: Coordinate, start: Coordinate, end: Coordinate) {
   return {
     alongMeters: distanceMeters(start, end) * t,
     distanceMeters: distanceMeters(point, projected),
+    projected,
   };
 }
 
@@ -49,34 +50,100 @@ export type RouteProgress = {
   fraction: number;
 };
 
-export function progressAlongRoute(point: Coordinate, geometry: Coordinate[]): RouteProgress {
-  if (geometry.length < 2) {
-    return { traveledMeters: 0, remainingMeters: 0, totalMeters: 0, fraction: 0 };
-  }
+export type RouteMatch = RouteProgress & {
+  snapped: Coordinate;
+  segmentIndex: number;
+  crossTrackMeters: number;
+  offRoute: boolean;
+};
 
-  let traveledBefore = 0;
-  let bestDistance = Number.POSITIVE_INFINITY;
-  let bestTraveled = 0;
+export type RouteMatchHint = {
+  segmentIndex: number;
+  traveledMeters: number;
+};
 
+const OFF_ROUTE_METERS = 50;
+
+type Projection = {
+  segmentIndex: number;
+  traveledMeters: number;
+  crossTrackMeters: number;
+  snapped: Coordinate;
+};
+
+function projectOnto(point: Coordinate, geometry: Coordinate[], startIndex: number): { best: Projection; totalMeters: number } | null {
+  if (geometry.length < 2) return null;
+  const prefix = [0];
   for (let index = 0; index < geometry.length - 1; index += 1) {
+    const start = geometry[index];
+    const end = geometry[index + 1];
+    const length = start && end ? distanceMeters(start, end) : 0;
+    prefix.push((prefix[index] ?? 0) + length);
+  }
+  const totalMeters = prefix[prefix.length - 1] ?? 0;
+  let best: Projection | null = null;
+  for (let index = startIndex; index < geometry.length - 1; index += 1) {
     const start = geometry[index];
     const end = geometry[index + 1];
     if (!start || !end) continue;
     const segment = projectSegment(point, start, end);
-    if (segment.distanceMeters < bestDistance) {
-      bestDistance = segment.distanceMeters;
-      bestTraveled = traveledBefore + segment.alongMeters;
+    if (!best || segment.distanceMeters < best.crossTrackMeters) {
+      best = {
+        segmentIndex: index,
+        traveledMeters: (prefix[index] ?? 0) + segment.alongMeters,
+        crossTrackMeters: segment.distanceMeters,
+        snapped: segment.projected,
+      };
     }
-    traveledBefore += distanceMeters(start, end);
+  }
+  return best ? { best, totalMeters } : null;
+}
+
+function emptyMatch(point: Coordinate): RouteMatch {
+  return {
+    snapped: point,
+    segmentIndex: -1,
+    crossTrackMeters: 0,
+    traveledMeters: 0,
+    remainingMeters: 0,
+    totalMeters: 0,
+    fraction: 0,
+    offRoute: true,
+  };
+}
+
+export function matchToRoute(point: Coordinate, geometry: Coordinate[], hint?: RouteMatchHint | null): RouteMatch {
+  const full = projectOnto(point, geometry, 0);
+  if (!full) return emptyMatch(point);
+
+  let chosen = full.best;
+  if (hint && hint.segmentIndex >= 0) {
+    const forward = projectOnto(point, geometry, Math.max(0, hint.segmentIndex - 1));
+    if (forward && forward.best.crossTrackMeters <= full.best.crossTrackMeters + 25) {
+      chosen = forward.best;
+    }
   }
 
-  const total = traveledBefore;
-  const traveled = Math.min(total, Math.max(0, bestTraveled));
+  const traveled = Math.min(full.totalMeters, Math.max(0, chosen.traveledMeters));
   return {
+    snapped: chosen.snapped,
+    segmentIndex: chosen.segmentIndex,
+    crossTrackMeters: chosen.crossTrackMeters,
     traveledMeters: traveled,
-    remainingMeters: Math.max(0, total - traveled),
-    totalMeters: total,
-    fraction: total > 0 ? traveled / total : 0,
+    remainingMeters: Math.max(0, full.totalMeters - traveled),
+    totalMeters: full.totalMeters,
+    fraction: full.totalMeters > 0 ? traveled / full.totalMeters : 0,
+    offRoute: chosen.crossTrackMeters > OFF_ROUTE_METERS,
+  };
+}
+
+export function progressAlongRoute(point: Coordinate, geometry: Coordinate[]): RouteProgress {
+  const match = matchToRoute(point, geometry);
+  return {
+    traveledMeters: match.traveledMeters,
+    remainingMeters: match.remainingMeters,
+    totalMeters: match.totalMeters,
+    fraction: match.fraction,
   };
 }
 

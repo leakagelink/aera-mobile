@@ -59,6 +59,8 @@ export default function TripCompleteScreen() {
         <MetricCard label="Duration" value={formatDuration(trip.durationSeconds)} />
         <MetricCard label="Average speed" value={formatSpeed(trip.averageSpeedMps, units)} unit={speedUnit(units)} />
         <MetricCard label="Maximum speed" value={formatSpeed(trip.maxSpeedMps, units)} unit={speedUnit(units)} />
+        {trip.movingTimeSeconds !== undefined ? <MetricCard label="Moving" value={formatDuration(trip.movingTimeSeconds)} /> : null}
+        {trip.stoppedTimeSeconds !== undefined ? <MetricCard label="Stopped" value={formatDuration(trip.stoppedTimeSeconds)} /> : null}
       </View>
       <View style={[styles.times, { backgroundColor: theme.colors.surface }]}>
         <AppText size={14}>Started {formatClock(trip.startedAt)}</AppText>
@@ -71,7 +73,15 @@ export default function TripCompleteScreen() {
         </AppText>
       </View>
       <View style={styles.map}>
-        <AeraMap ref={mapRef} routes={[{ id: trip.id, coordinates: trip.samples, selected: true }]} />
+        <AeraMap
+          ref={mapRef}
+          routes={[
+            ...(trip.plannedGeometry && trip.plannedGeometry.length > 1
+              ? [{ id: `${trip.id}-planned`, coordinates: trip.plannedGeometry, selected: false }]
+              : []),
+            { id: trip.id, coordinates: trip.samples, selected: true },
+          ]}
+        />
       </View>
       <PrimaryButton onPress={() => router.push({ pathname: '/trip/[id]', params: { id: trip.id } })}>View trip</PrimaryButton>
       <SecondaryButton onPress={goMap} style={styles.secondary}>

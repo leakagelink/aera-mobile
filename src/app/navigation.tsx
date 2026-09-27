@@ -60,7 +60,8 @@ export default function NavigationScreen() {
 
   useEffect(() => {
     if (!follow || !location) return;
-    mapRef.current?.recenter(location.longitude, location.latitude, 16.5);
+    const bearing = location.heading !== null && location.heading >= 0 ? location.heading : undefined;
+    mapRef.current?.recenter(location.longitude, location.latitude, 16.5, bearing);
   }, [follow, location]);
 
   const confirmRef = useRef<() => void>(() => undefined);
@@ -131,6 +132,8 @@ export default function NavigationScreen() {
               <MetricCard compact label="Average" value={formatSpeed(live.averageSpeedMps, units)} unit={speedUnit(units)} />
               <MetricCard compact label="Traveled" value={formatDistance(live.distanceMeters, units)} />
               <MetricCard compact label="Elapsed" value={formatDuration(live.durationSeconds)} />
+            <MetricCard compact label="Moving" value={formatDuration(live.movingTimeSeconds)} />
+            <MetricCard compact label="Stopped" value={formatDuration(live.stoppedTimeSeconds)} />
             </View>
           ) : null}
           <View style={styles.primaryMetrics}>

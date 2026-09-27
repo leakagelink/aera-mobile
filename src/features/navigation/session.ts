@@ -1,4 +1,4 @@
-import { reverseGeocode } from '@/services/nominatim';
+import { geocodingProvider } from '@/services/providers';
 import { useLocationStore } from '@/store/locationStore';
 import { selectedRoute, useSessionStore } from '@/store/sessionStore';
 import { useTripStore } from '@/store/tripStore';
@@ -15,7 +15,7 @@ export async function beginNavigation(): Promise<void> {
 
   let originName = 'Current location';
   try {
-    const place = await reverseGeocode(location);
+    const place = await geocodingProvider().reverse(location);
     if (place?.name) originName = place.name;
   } catch {
     originName = 'Current location';
@@ -25,15 +25,18 @@ export async function beginNavigation(): Promise<void> {
     timestamp: location.timestamp,
     latitude: location.latitude,
     longitude: location.longitude,
+    accuracy: location.accuracy,
     speed: location.speed,
     heading: location.heading,
-    accuracy: location.accuracy,
+    altitude: location.altitude,
   };
 
   await useTripStore.getState().startDraft({
     originName,
     destinationName: session.destination.name,
     routeSummary: route.summary,
+    routeProvider: route.provider,
+    plannedGeometry: route.geometry,
     initialSample,
   });
 }
