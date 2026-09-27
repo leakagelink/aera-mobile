@@ -1,6 +1,7 @@
 import { CanActivate, ExecutionContext, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
+import { IS_ADMIN } from '../../modules/admin/admin.decorator';
 import { IS_PUBLIC } from '../decorators/public.decorator';
 import { APP_CONFIG } from '../../config/config.module';
 import type { AppConfig } from '../../config/load-config';
@@ -20,6 +21,8 @@ export class DevelopmentUserGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC, [context.getHandler(), context.getClass()]);
     if (isPublic) return true;
+    const isAdmin = this.reflector.getAllAndOverride<boolean>(IS_ADMIN, [context.getHandler(), context.getClass()]);
+    if (isAdmin) return true;
     if (this.config.nodeEnv === 'production' || this.config.authMode !== 'development') {
       throw new UnauthorizedException('Authentication is not configured.');
     }

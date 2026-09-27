@@ -14,3 +14,5 @@ Copy `.env.example` to `.env.local` to override the map style, geocoding, or rou
 Expo SDK 57 and React Native 0.86 always use the New Architecture, which MapLibre React Native 11 requires.
 
 The API lives in `backend/` and is separate from the Expo app. It is a NestJS service for PostgreSQL/PostGIS and Redis, meant to run on a normal Linux VPS. The phone keeps using direct map, search, and routing providers until `EXPO_PUBLIC_AERA_API_BASE_URL` is set. See `backend/.env.example` for local Docker Compose settings. Do not commit real passwords.
+
+Weather is requested from the Arah API only when a caller asks for it. The phone never receives an OpenWeather key. Provider setup, admin sign-in, and encryption are documented in `backend/docs/PROVIDER_CONFIGURATION.md`. The admin panel is served at `/admin` on the API.

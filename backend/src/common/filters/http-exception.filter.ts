@@ -1,6 +1,8 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import type { Request, Response } from 'express';
 
+import { sanitizeProviderError } from '../../security/sanitize';
+
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
@@ -10,7 +12,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const response = http.getResponse<Response>();
     const request = http.getRequest<Request & { requestId?: string }>();
     const status = exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
-    const message = exception instanceof HttpException ? messageOf(exception) : 'Something went wrong.';
+    const message = sanitizeProviderError(exception instanceof HttpException ? messageOf(exception) : 'Something went wrong.');
+    const code = exception instanceof HttpException ? codeOf(exception) : null;
     if (status >= 500) {
       const errorName = exception instanceof Error ? exception.name : 'Error';
       this.logger.error(JSON.stringify({ requestId: request.requestId, status, error: errorName }));
@@ -19,6 +22,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       statusCode: status,
       message,
       requestId: request.requestId,
+      ...(code ? { code } : {}),
     });
   }
 }
@@ -32,4 +36,12 @@ function messageOf(exception: HttpException): string {
     if (typeof message === 'string') return message;
   }
   return exception.message;
+}
+
+function codeOf(exception: HttpException): string | null {
+  const body = exception.getResponse();
+  if (typeof body === 'object' && body && 'code' in body && typeof (body as { code: unknown }).code === 'string') {
+    return (body as { code: string }).code;
+  }
+  return null;
 }

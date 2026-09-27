@@ -15,6 +15,15 @@ export type AppConfig = {
   geocodingUserAgent: string;
   routingProvider: 'osrm';
   routingBaseUrl: string;
+  openWeatherApiKey: string | null;
+  openWeatherBaseUrl: string;
+  geminiApiKey: string | null;
+  tomtomApiKey: string | null;
+  mapStyleUrl: string | null;
+  mapTileBaseUrl: string | null;
+  weatherCacheTtlSeconds: number;
+  secretEncryptionKey: Buffer | null;
+  adminJwtSecret: string | null;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -46,10 +55,19 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
     devUserId,
     trustProxy: env.TRUST_PROXY === 'true',
     geocodingProvider,
-    geocodingBaseUrl: trimSlash(readUrl(env.GEOCODING_BASE_URL, 'https://nominatim.openstreetmap.org', 'GEOCODING_BASE_URL')),
+    geocodingBaseUrl: trimSlash(readUrl(env.GEOCODING_BASE_URL?.trim() || env.NOMINATIM_BASE_URL, 'https://nominatim.openstreetmap.org', 'GEOCODING_BASE_URL')),
     geocodingUserAgent: env.GEOCODING_USER_AGENT?.trim() || 'ArahBackend/1.0 (https://github.com/leakagelink/aera-mobile)',
     routingProvider,
-    routingBaseUrl: trimSlash(readUrl(env.ROUTING_BASE_URL, 'https://router.project-osrm.org', 'ROUTING_BASE_URL')),
+    routingBaseUrl: trimSlash(readUrl(env.ROUTING_BASE_URL?.trim() || env.OSRM_BASE_URL, 'https://router.project-osrm.org', 'ROUTING_BASE_URL')),
+    openWeatherApiKey: readSecret(env.OPENWEATHER_API_KEY),
+    openWeatherBaseUrl: trimSlash(readUrl(env.OPENWEATHER_BASE_URL, 'https://api.openweathermap.org', 'OPENWEATHER_BASE_URL')),
+    geminiApiKey: readSecret(env.GEMINI_API_KEY),
+    tomtomApiKey: readSecret(env.TOMTOM_API_KEY),
+    mapStyleUrl: readOptionalHttpUrl(env.MAP_STYLE_URL, 'MAP_STYLE_URL'),
+    mapTileBaseUrl: readOptionalHttpUrl(env.MAP_TILE_BASE_URL, 'MAP_TILE_BASE_URL'),
+    weatherCacheTtlSeconds: readRangeInt(env.WEATHER_CACHE_TTL_SECONDS, 600, 60, 86_400, 'WEATHER_CACHE_TTL_SECONDS'),
+    secretEncryptionKey: readEncryptionKey(env.AERA_SECRET_ENCRYPTION_KEY),
+    adminJwtSecret: readJwtSecret(env.ADMIN_JWT_SECRET),
   };
 }
 
@@ -118,4 +136,49 @@ function readEnum<T extends string>(value: string | undefined, allowed: readonly
 
 function trimSlash(value: string): string {
   return value.replace(/\/$/, '');
+}
+
+function readSecret(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+function readOptionalHttpUrl(value: string | undefined, name: string): string | null {
+  if (!value?.trim()) return null;
+  return trimSlash(readUrl(value, value, name));
+}
+
+function readRangeInt(value: string | undefined, fallback: number, min: number, max: number, name: string): number {
+  if (!value?.trim()) return fallback;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < min || parsed > max) throw new Error(`${name} is invalid.`);
+  return parsed;
+}
+
+function readEncryptionKey(value: string | undefined): Buffer | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  const decoded = decodeKey(trimmed);
+  if (!decoded || decoded.length !== 32) {
+    throw new Error('AERA_SECRET_ENCRYPTION_KEY must be 32 bytes, encoded as base64 or hex.');
+  }
+  return decoded;
+}
+
+function decodeKey(value: string): Buffer | null {
+  if (/^[0-9a-f]{64}$/i.test(value)) return Buffer.from(value, 'hex');
+  try {
+    const decoded = Buffer.from(value, 'base64');
+    if (decoded.length === 32 && decoded.toString('base64').replace(/=+$/, '') === value.replace(/=+$/, '')) return decoded;
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function readJwtSecret(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  if (trimmed.length < 32) throw new Error('ADMIN_JWT_SECRET must be at least 32 characters.');
+  return trimmed;
 }

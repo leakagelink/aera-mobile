@@ -12,6 +12,9 @@ describe('loadConfig', () => {
     expect(config.routingProvider).toBe('osrm');
     expect(config.authMode).toBe('development');
     expect(config.devUserId).toBe('00000000-0000-4000-8000-000000000001');
+    expect(config.openWeatherApiKey).toBeNull();
+    expect(config.openWeatherBaseUrl).toBe('https://api.openweathermap.org');
+    expect(config.secretEncryptionKey).toBeNull();
   });
 
   it('rejects a missing database URL', () => {

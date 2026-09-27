@@ -1,4 +1,5 @@
 import { placeSearchProvider, routingProvider } from '@/services/providers';
+import { fetchCurrentWeather } from '@/services/weather/currentWeather';
 import { useLocationStore } from '@/store/locationStore';
 import { selectedRoute, useSessionStore } from '@/store/sessionStore';
 import { useTripStore } from '@/store/tripStore';
@@ -22,6 +23,7 @@ export const aeraToolNames = [
   'getTripStats',
   'getTripHistory',
   'getRoadHistory',
+  'getWeather',
 ] as const;
 
 export type AeraToolName = (typeof aeraToolNames)[number];
@@ -60,6 +62,8 @@ export async function runAeraTool(name: AeraToolName, input: Record<string, unkn
       }));
     case 'getRoadHistory':
       return getRoadHistory(readCoordinate(input), readRadius(input));
+    case 'getWeather':
+      return getWeather(input);
     default:
       throw new AppError('That navigation tool is not available.', 'unavailable');
   }
@@ -128,6 +132,21 @@ function getRoadHistory(coordinate: Coordinate, radiusMeters: number) {
     }
   }
   return matches;
+}
+
+function getWeather(input: Record<string, unknown>) {
+  const coordinate = hasCoordinate(input) ? readCoordinate(input) : currentCoordinate();
+  return fetchCurrentWeather(coordinate.latitude, coordinate.longitude);
+}
+
+function hasCoordinate(input: Record<string, unknown>): boolean {
+  return input.latitude !== undefined && input.longitude !== undefined;
+}
+
+function currentCoordinate(): Coordinate {
+  const location = useLocationStore.getState().current;
+  if (!location) throw new AppError('Current location is not available.', 'unavailable');
+  return { latitude: location.latitude, longitude: location.longitude };
 }
 
 function readString(input: Record<string, unknown>, key: string): string {

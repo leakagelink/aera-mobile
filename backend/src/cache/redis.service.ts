@@ -54,6 +54,25 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  async setIfAbsent(key: string, value: string, ttlSeconds: number): Promise<boolean> {
+    try {
+      await this.connect();
+      const result = await this.client?.set(key, value, 'EX', ttlSeconds, 'NX');
+      return result === 'OK';
+    } catch {
+      return true;
+    }
+  }
+
+  async delete(key: string): Promise<void> {
+    try {
+      await this.connect();
+      await this.client?.del(key);
+    } catch {
+      this.logger.warn(JSON.stringify({ event: 'redis_delete_failed' }));
+    }
+  }
+
   async takeToken(key: string, limit: number, windowSeconds: number): Promise<boolean> {
     try {
       await this.connect();

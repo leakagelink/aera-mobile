@@ -7,7 +7,11 @@ import { DevelopmentUserGuard } from './common/guards/development-user.guard';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { AppConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
+import { AdminGuard } from './modules/admin/admin.guard';
+import { AdminModule } from './modules/admin/admin.module';
 import { HealthModule } from './modules/health/health.module';
+import { ProviderConfigModule } from './modules/provider-config/provider-config.module';
+import { WeatherModule } from './modules/weather/weather.module';
 import { LocationsModule } from './modules/locations/locations.module';
 import { NavigationModule } from './modules/navigation/navigation.module';
 import { PlacesModule } from './modules/places/places.module';
@@ -22,6 +26,7 @@ import { ProviderModule } from './providers/provider.module';
     DatabaseModule,
     CacheModule,
     ProviderModule,
+    ProviderConfigModule,
     HealthModule,
     UsersModule,
     TripsModule,
@@ -29,10 +34,13 @@ import { ProviderModule } from './providers/provider.module';
     PlacesModule,
     LocationsModule,
     NavigationModule,
+    WeatherModule,
+    AdminModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: DevelopmentUserGuard },
     { provide: APP_GUARD, useClass: RateLimitGuard },
+    { provide: APP_GUARD, useClass: AdminGuard },
   ],
 })
 export class AppModule implements NestModule {
