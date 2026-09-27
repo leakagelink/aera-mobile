@@ -1,15 +1,32 @@
-import { Controller, Get, Inject, Req } from '@nestjs/common';
+import { Controller, Get, Query, Req } from '@nestjs/common';
+import { Type } from 'class-transformer';
+import { IsNumber, IsOptional, Max, Min } from 'class-validator';
 
 import type { RequestUser } from '../../common/guards/development-user.guard';
-import { PROVIDERS } from '../../providers/provider.module';
-import type { ProviderSet } from '../../providers/registry';
+import { TrafficService } from '../traffic/traffic.service';
 import { TripsService } from '../trips/trips.service';
+
+class TrafficQueryDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  lat?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  lng?: number;
+}
 
 @Controller('v1/navigation')
 export class NavigationController {
   constructor(
     private readonly trips: TripsService,
-    @Inject(PROVIDERS) private readonly providers: ProviderSet,
+    private readonly trafficService: TrafficService,
   ) {}
 
   @Get('active')
@@ -18,7 +35,11 @@ export class NavigationController {
   }
 
   @Get('traffic')
-  traffic() {
-    return this.providers.traffic.report();
+  async traffic(@Query() query: TrafficQueryDto) {
+    const report = await this.trafficService.report(query.lat, query.lng);
+    if (!report.available && report.reason === 'not_configured') {
+      return { available: false, reason: 'not_configured' };
+    }
+    return report;
   }
 }

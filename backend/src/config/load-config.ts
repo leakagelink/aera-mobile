@@ -18,7 +18,12 @@ export type AppConfig = {
   openWeatherApiKey: string | null;
   openWeatherBaseUrl: string;
   geminiApiKey: string | null;
+  geminiModel: string;
   tomtomApiKey: string | null;
+  aiMaxToolRounds: number;
+  aiMaxMessageChars: number;
+  aiMaxContextMessages: number;
+  aiRateLimitPerMinute: number;
   mapStyleUrl: string | null;
   mapTileBaseUrl: string | null;
   weatherCacheTtlSeconds: number;
@@ -62,6 +67,11 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
     openWeatherApiKey: readSecret(env.OPENWEATHER_API_KEY),
     openWeatherBaseUrl: trimSlash(readUrl(env.OPENWEATHER_BASE_URL, 'https://api.openweathermap.org', 'OPENWEATHER_BASE_URL')),
     geminiApiKey: readSecret(env.GEMINI_API_KEY),
+    geminiModel: env.GEMINI_MODEL?.trim() || 'gemini-2.0-flash',
+    aiMaxToolRounds: readRangeInt(env.AI_MAX_TOOL_ROUNDS, 5, 1, 8, 'AI_MAX_TOOL_ROUNDS'),
+    aiMaxMessageChars: readRangeInt(env.AI_MAX_MESSAGE_CHARS, 2000, 100, 8000, 'AI_MAX_MESSAGE_CHARS'),
+    aiMaxContextMessages: readRangeInt(env.AI_MAX_CONTEXT_MESSAGES, 8, 0, 20, 'AI_MAX_CONTEXT_MESSAGES'),
+    aiRateLimitPerMinute: readRangeInt(env.AI_RATE_LIMIT_PER_MINUTE, 12, 1, 120, 'AI_RATE_LIMIT_PER_MINUTE'),
     tomtomApiKey: readSecret(env.TOMTOM_API_KEY),
     mapStyleUrl: readOptionalHttpUrl(env.MAP_STYLE_URL, 'MAP_STYLE_URL'),
     mapTileBaseUrl: readOptionalHttpUrl(env.MAP_TILE_BASE_URL, 'MAP_TILE_BASE_URL'),

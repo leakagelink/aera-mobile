@@ -34,10 +34,14 @@ export async function requestJson(url: string, options: RequestOptions = {}): Pr
       signal: controller.signal,
     });
     if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      const serverMessage = payload && typeof payload === 'object' && typeof (payload as { message?: unknown }).message === 'string' ? (payload as { message: string }).message : '';
       throw new AppError(
-        response.status === 429
-          ? 'The map service is busy. Wait a moment and try again.'
-          : `The request failed (${response.status}). Try again.`,
+        serverMessage.length > 0 && serverMessage.length <= 180
+          ? serverMessage
+          : response.status === 429
+            ? 'The map service is busy. Wait a moment and try again.'
+            : `The request failed (${response.status}). Try again.`,
         'network',
       );
     }

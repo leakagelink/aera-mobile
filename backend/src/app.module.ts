@@ -9,6 +9,7 @@ import { AppConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 import { AdminGuard } from './modules/admin/admin.guard';
 import { AdminModule } from './modules/admin/admin.module';
+import { AiModule } from './modules/ai/ai.module';
 import { HealthModule } from './modules/health/health.module';
 import { ProviderConfigModule } from './modules/provider-config/provider-config.module';
 import { WeatherModule } from './modules/weather/weather.module';
@@ -16,6 +17,7 @@ import { LocationsModule } from './modules/locations/locations.module';
 import { NavigationModule } from './modules/navigation/navigation.module';
 import { PlacesModule } from './modules/places/places.module';
 import { RoutesModule } from './modules/routes/routes.module';
+import { TrafficModule } from './modules/traffic/traffic.module';
 import { TripsModule } from './modules/trips/trips.module';
 import { UsersModule } from './modules/users/users.module';
 import { ProviderModule } from './providers/provider.module';
@@ -35,6 +37,8 @@ import { ProviderModule } from './providers/provider.module';
     LocationsModule,
     NavigationModule,
     WeatherModule,
+    TrafficModule,
+    AiModule,
     AdminModule,
   ],
   providers: [

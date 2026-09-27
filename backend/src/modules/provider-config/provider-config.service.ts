@@ -158,6 +158,14 @@ export class ProviderConfigService {
     return this.environmentFallback(provider, providerType);
   }
 
+  activeGemini(): Promise<(ResolvedProvider & { model: string }) | null> {
+    return this.activeKeyed('ai', 'gemini', this.config.geminiApiKey, 'https://generativelanguage.googleapis.com', this.config.geminiModel);
+  }
+
+  activeTomTom(): Promise<ResolvedProvider | null> {
+    return this.activeKeyed('traffic', 'tomtom', this.config.tomtomApiKey, 'https://api.tomtom.com', null);
+  }
+
   async activeWeather(): Promise<ResolvedProvider | null> {
     const row = await this.providers.findPreferred('weather');
     if (row) {
@@ -212,6 +220,25 @@ export class ProviderConfigService {
       lastSuccessAt: row.last_success_at?.toISOString() ?? null,
       status: providerStatus({ configured, enabled: row.enabled, lastTestStatus: row.last_test_status }),
     };
+  }
+
+  private async activeKeyed(type: ProviderType, slug: ProviderSlug, envKey: string | null, fallbackUrl: string, model: string | null): Promise<(ResolvedProvider & { model: string }) | null> {
+    const row = await this.providers.findPreferred(type);
+    if (row) {
+      const enabled = row.enabled && row.provider === slug;
+      return {
+        provider: row.provider,
+        providerType: type,
+        baseUrl: row.base_url,
+        apiKey: enabled && row.api_key_encrypted ? this.decryptStored(row.api_key_encrypted) : enabled ? envKey : null,
+        timeoutMs: row.timeout_ms,
+        enabled,
+        source: 'database',
+        model: row.model?.trim() || model || 'gemini-2.0-flash',
+      };
+    }
+    if (!envKey) return null;
+    return { provider: slug, providerType: type, baseUrl: fallbackUrl, apiKey: envKey, timeoutMs: 10_000, enabled: true, source: 'environment', model: model || 'gemini-2.0-flash' };
   }
 
   private decryptOrEnv(row: ProviderRow, provider: string): string | null {

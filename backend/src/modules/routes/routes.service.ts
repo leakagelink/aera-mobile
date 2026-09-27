@@ -17,11 +17,12 @@ export class RoutesService {
     @Inject(PROVIDERS) private readonly providers: ProviderSet,
   ) {}
 
+  preview(origin: Coordinate, destination: Coordinate): Promise<RouteLeg[]> {
+    return this.cachedRoutes(origin, destination);
+  }
+
   async calculate(userId: string, origin: Coordinate, destination: Coordinate) {
-    const key = `aera:route:${digest(origin)}:${digest(destination)}`;
-    const cached = await this.redis.get(key);
-    const alternatives = cached ? parseRoutes(cached) : await this.providers.routing.calculate(origin, destination);
-    if (!cached) await this.redis.set(key, JSON.stringify(alternatives), 120);
+    const alternatives = await this.cachedRoutes(origin, destination);
     const recommended = alternatives[0];
     const saved = recommended ? await this.routes.save(userId, recommended) : null;
     return { savedRouteId: saved?.id ?? null, routes: alternatives };
@@ -41,6 +42,14 @@ export class RoutesService {
     const deleted = await this.routes.remove(id, userId);
     if (!deleted) throw new NotFoundException('Route not found.');
     return { deleted: true };
+  }
+
+  private async cachedRoutes(origin: Coordinate, destination: Coordinate): Promise<RouteLeg[]> {
+    const key = `aera:route:${digest(origin)}:${digest(destination)}`;
+    const cached = await this.redis.get(key);
+    const alternatives = cached ? parseRoutes(cached) : await this.providers.routing.calculate(origin, destination);
+    if (!cached) await this.redis.set(key, JSON.stringify(alternatives), 120);
+    return alternatives;
   }
 }
 
