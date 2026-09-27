@@ -27,4 +27,12 @@ export const env = {
   geocodingUserAgent: readText(process.env.EXPO_PUBLIC_NOMINATIM_USER_AGENT, DEFAULT_USER_AGENT),
   routingBaseUrl: readUrl(process.env.EXPO_PUBLIC_ROUTING_BASE_URL ?? process.env.EXPO_PUBLIC_OSRM_BASE_URL, DEFAULT_OSRM),
   routingProvider: readText(process.env.EXPO_PUBLIC_ROUTING_PROVIDER, 'osrm'),
+  aeraApiBaseUrl: readOptionalUrl(process.env.EXPO_PUBLIC_AERA_API_BASE_URL),
 };
+
+function readOptionalUrl(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  const parsed = urlSchema.safeParse(trimmed);
+  return parsed.success ? parsed.data.replace(/\/$/, '') : null;
+}

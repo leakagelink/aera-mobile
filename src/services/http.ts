@@ -7,6 +7,8 @@ type RequestOptions = {
   headers?: Record<string, string>;
   signal?: AbortSignal;
   timeoutMs?: number;
+  method?: string;
+  body?: string;
 };
 
 type HttpResponse = {
@@ -23,6 +25,8 @@ export async function requestJson(url: string, options: RequestOptions = {}): Pr
 
   try {
     const response = await send(url, {
+      method: options.method,
+      body: options.body,
       headers: {
         Accept: 'application/json',
         ...options.headers,
@@ -53,7 +57,10 @@ export async function requestJson(url: string, options: RequestOptions = {}): Pr
   }
 }
 
-async function send(url: string, init: { headers: Record<string, string>; signal: AbortSignal }): Promise<HttpResponse> {
+async function send(
+  url: string,
+  init: { method?: string; body?: string; headers: Record<string, string>; signal: AbortSignal },
+): Promise<HttpResponse> {
   if (Platform.OS === 'web') {
     return fetch(url, init);
   }

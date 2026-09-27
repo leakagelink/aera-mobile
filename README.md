@@ -12,3 +12,5 @@ npx expo run:android
 Copy `.env.example` to `.env.local` to override the map style, geocoding, or routing endpoints. Screens talk to provider interfaces, so those URLs can later point at an Aera-hosted search or routing service. Do not commit secrets. The defaults use OpenFreeMap, Nominatim, and the public OSRM demo server. OpenStreetMap data is used through those services; the map keeps its attribution.
 
 Expo SDK 57 and React Native 0.86 always use the New Architecture, which MapLibre React Native 11 requires.
+
+The API lives in `backend/` and is separate from the Expo app. It is a NestJS service for PostgreSQL/PostGIS and Redis, meant to run on a normal Linux VPS. The phone keeps using direct map, search, and routing providers until `EXPO_PUBLIC_AERA_API_BASE_URL` is set. See `backend/.env.example` for local Docker Compose settings. Do not commit real passwords.
