@@ -9,6 +9,7 @@ import { AppConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 import { AdminGuard } from './modules/admin/admin.guard';
 import { AdminModule } from './modules/admin/admin.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { AiModule } from './modules/ai/ai.module';
 import { HealthModule } from './modules/health/health.module';
 import { ProviderConfigModule } from './modules/provider-config/provider-config.module';
@@ -40,6 +41,7 @@ import { ProviderModule } from './providers/provider.module';
     TrafficModule,
     AiModule,
     AdminModule,
+    AuthModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: DevelopmentUserGuard },

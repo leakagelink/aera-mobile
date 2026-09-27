@@ -26,7 +26,20 @@ describe('loadConfig', () => {
   });
 
   it('refuses the development user when NODE_ENV is production', () => {
-    expect(() => loadConfig({ ...base, NODE_ENV: 'production' })).toThrow('NODE_ENV=production');
+    expect(() => loadConfig({ ...base, NODE_ENV: 'production' })).toThrow('NODE_ENV=production requires AUTH_MODE=jwt.');
+  });
+
+  it('accepts production when each account has its own secret', () => {
+    const config = loadConfig({
+      ...base,
+      NODE_ENV: 'production',
+      AUTH_MODE: 'jwt',
+      USER_JWT_SECRET: 'u'.repeat(32),
+      ADMIN_JWT_SECRET: 'a'.repeat(32),
+      AERA_SECRET_ENCRYPTION_KEY: Buffer.alloc(32).toString('base64'),
+    });
+    expect(config.authMode).toBe('jwt');
+    expect(config.userJwtSecret).toHaveLength(32);
   });
 
   it('rejects a non-postgres database URL', () => {

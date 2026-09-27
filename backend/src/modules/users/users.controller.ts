@@ -8,8 +8,9 @@ export class UsersController {
   me(@Req() request: { user: RequestUser }) {
     return {
       id: request.user.id,
-      developmentOnly: true,
-      authentication: 'not_configured',
+      email: request.user.email,
+      developmentOnly: request.user.developmentOnly,
+      authentication: request.user.developmentOnly ? 'development' : 'jwt',
     };
   }
 }

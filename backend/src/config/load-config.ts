@@ -7,8 +7,9 @@ export type AppConfig = {
   redisUrl: string;
   corsOrigins: string[];
   rateLimitPerMinute: number;
-  authMode: 'development';
+  authMode: 'development' | 'jwt';
   devUserId: string;
+  userJwtSecret: string | null;
   trustProxy: boolean;
   geocodingProvider: 'nominatim';
   geocodingBaseUrl: string;
@@ -41,9 +42,15 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
   assertUrl(redisUrl, 'REDIS_URL');
   const geocodingProvider = readEnum(env.GEOCODING_PROVIDER, ['nominatim'], 'nominatim');
   const routingProvider = readEnum(env.ROUTING_PROVIDER, ['osrm'], 'osrm');
-  const authMode = readEnum(env.AUTH_MODE, ['development'], 'development');
+  const authMode = readEnum(env.AUTH_MODE, ['development', 'jwt'], 'development');
+  const userJwtSecret = readJwtSecret(env.USER_JWT_SECRET, 'USER_JWT_SECRET');
+  const adminJwtSecret = readJwtSecret(env.ADMIN_JWT_SECRET, 'ADMIN_JWT_SECRET');
+  const secretEncryptionKey = readEncryptionKey(env.AERA_SECRET_ENCRYPTION_KEY);
   if (nodeEnv === 'production') {
-    throw new Error('AUTH_MODE=development cannot be used when NODE_ENV=production.');
+    if (authMode !== 'jwt') throw new Error('NODE_ENV=production requires AUTH_MODE=jwt.');
+    if (!userJwtSecret) throw new Error('USER_JWT_SECRET is required when NODE_ENV=production.');
+    if (!adminJwtSecret) throw new Error('ADMIN_JWT_SECRET is required when NODE_ENV=production.');
+    if (!secretEncryptionKey) throw new Error('AERA_SECRET_ENCRYPTION_KEY is required when NODE_ENV=production.');
   }
   const devUserId = (env.DEV_USER_ID?.trim() || DEV_USER_ID).toLowerCase();
   if (!UUID.test(devUserId)) {
@@ -58,6 +65,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
     rateLimitPerMinute: readPositiveInt(env.RATE_LIMIT_PER_MINUTE, 60),
     authMode,
     devUserId,
+    userJwtSecret,
     trustProxy: env.TRUST_PROXY === 'true',
     geocodingProvider,
     geocodingBaseUrl: trimSlash(readUrl(env.GEOCODING_BASE_URL?.trim() || env.NOMINATIM_BASE_URL, 'https://nominatim.openstreetmap.org', 'GEOCODING_BASE_URL')),
@@ -76,8 +84,8 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
     mapStyleUrl: readOptionalHttpUrl(env.MAP_STYLE_URL, 'MAP_STYLE_URL'),
     mapTileBaseUrl: readOptionalHttpUrl(env.MAP_TILE_BASE_URL, 'MAP_TILE_BASE_URL'),
     weatherCacheTtlSeconds: readRangeInt(env.WEATHER_CACHE_TTL_SECONDS, 600, 60, 86_400, 'WEATHER_CACHE_TTL_SECONDS'),
-    secretEncryptionKey: readEncryptionKey(env.AERA_SECRET_ENCRYPTION_KEY),
-    adminJwtSecret: readJwtSecret(env.ADMIN_JWT_SECRET),
+    secretEncryptionKey,
+    adminJwtSecret,
   };
 }
 
@@ -186,9 +194,9 @@ function decodeKey(value: string): Buffer | null {
   return null;
 }
 
-function readJwtSecret(value: string | undefined): string | null {
+function readJwtSecret(value: string | undefined, name: string): string | null {
   const trimmed = value?.trim();
   if (!trimmed) return null;
-  if (trimmed.length < 32) throw new Error('ADMIN_JWT_SECRET must be at least 32 characters.');
+  if (trimmed.length < 32) throw new Error(`${name} must be at least 32 characters.`);
   return trimmed;
 }

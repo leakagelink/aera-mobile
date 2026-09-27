@@ -27,7 +27,7 @@ A disabled database row does not fall through to the environment key. None of th
 
 ## Authentication
 
-`POST /api/v1/ai/chat` uses the same request user as the rest of the API. In development, `AUTH_MODE=development` attaches the fixed development user. In production the process still refuses to boot while mobile authentication is development-only. The assistant does not add a second login and does not accept a user id from Gemini.
+`POST /api/v1/ai/chat` uses the same request user as the rest of the API. In development, `AUTH_MODE=development` attaches the fixed development user. In production, `AUTH_MODE=jwt` is required and the user id comes from the signed-in account's bearer token. The assistant does not accept a user id from Gemini. See `backend/docs/AUTH.md`.
 
 ## Request
 

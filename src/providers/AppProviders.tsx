@@ -6,6 +6,7 @@ import { AppErrorBoundary } from '@/components/AppErrorBoundary';
 import { readExistingPermission } from '@/features/location/locationEngine';
 import { queryClient } from '@/services/queryClient';
 import { usePreferencesStore } from '@/store/preferencesStore';
+import { useAccountStore } from '@/store/sessionAuthStore';
 import { useTripStore } from '@/store/tripStore';
 import { ReducedMotionProvider } from '@/theme/ReducedMotion';
 
@@ -20,7 +21,13 @@ export function AppProviders({ children }: { children: ReactNode }) {
     const finish = () => usePreferencesStore.setState({ hydrated: true });
     const unsubscribe = usePreferencesStore.persist.onFinishHydration(finish);
     if (usePreferencesStore.persist.hasHydrated()) finish();
-    return () => unsubscribe();
+    const finishSession = () => useAccountStore.setState({ hydrated: true });
+    const unsubscribeSession = useAccountStore.persist.onFinishHydration(finishSession);
+    if (useAccountStore.persist.hasHydrated()) finishSession();
+    return () => {
+      unsubscribe();
+      unsubscribeSession();
+    };
   }, []);
 
   return (

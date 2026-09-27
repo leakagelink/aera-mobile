@@ -5,10 +5,12 @@ import { IS_ADMIN } from '../../modules/admin/admin.decorator';
 import { IS_PUBLIC } from '../decorators/public.decorator';
 import { APP_CONFIG } from '../../config/config.module';
 import type { AppConfig } from '../../config/load-config';
+import { readUserToken } from '../../security/user-token';
 
 export type RequestUser = {
   id: string;
-  developmentOnly: true;
+  email: string | null;
+  developmentOnly: boolean;
 };
 
 @Injectable()
@@ -23,11 +25,17 @@ export class DevelopmentUserGuard implements CanActivate {
     if (isPublic) return true;
     const isAdmin = this.reflector.getAllAndOverride<boolean>(IS_ADMIN, [context.getHandler(), context.getClass()]);
     if (isAdmin) return true;
-    if (this.config.nodeEnv === 'production' || this.config.authMode !== 'development') {
-      throw new UnauthorizedException('Authentication is not configured.');
+    const request = context.switchToHttp().getRequest<{ user?: RequestUser; headers?: { authorization?: string } }>();
+    if (this.config.authMode === 'development' && this.config.nodeEnv !== 'production') {
+      request.user = { id: this.config.devUserId, email: null, developmentOnly: true };
+      return true;
     }
-    const request = context.switchToHttp().getRequest<{ user?: RequestUser }>();
-    request.user = { id: this.config.devUserId, developmentOnly: true };
+    if (!this.config.userJwtSecret) throw new UnauthorizedException('Authentication is not configured.');
+    const header = request.headers?.authorization;
+    const token = header?.toLowerCase().startsWith('bearer ') ? header.slice(7).trim() : '';
+    const session = token ? readUserToken(token, this.config.userJwtSecret) : null;
+    if (!session) throw new UnauthorizedException('Sign in to continue.');
+    request.user = { id: session.id, email: session.email, developmentOnly: false };
     return true;
   }
 }

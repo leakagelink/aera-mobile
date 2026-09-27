@@ -1,11 +1,13 @@
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useEffect } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { LogoMark } from '@/components/ui/LogoMark';
+import { aeraApiMode } from '@/services/api/client';
 import { useLocationStore } from '@/store/locationStore';
 import { usePreferencesStore } from '@/store/preferencesStore';
+import { useAccountStore } from '@/store/sessionAuthStore';
 import { usePrefersReducedMotion } from '@/theme/ReducedMotion';
 import { useTheme } from '@/theme/useTheme';
 
@@ -18,10 +20,17 @@ export default function SplashRoute() {
   const promptSeen = usePreferencesStore((state) => state.locationPromptSeen);
   const permission = useLocationStore((state) => state.permission);
   const permissionKnown = useLocationStore((state) => state.permissionKnown);
-  const ready = hydrated && permissionKnown;
+  const sessionHydrated = useAccountStore((state) => state.hydrated);
+  const token = useAccountStore((state) => state.token);
+  const needsAccount = aeraApiMode() === 'aera-api';
+  const ready = hydrated && permissionKnown && (!needsAccount || sessionHydrated);
 
   function continueToApp() {
     if (!ready) return;
+    if (needsAccount && !token) {
+      router.replace('/sign-in' as Href);
+      return;
+    }
     if (!onboarded) {
       router.replace('/onboarding');
       return;
@@ -36,12 +45,13 @@ export default function SplashRoute() {
   useEffect(() => {
     if (!ready) return;
     const timer = setTimeout(() => {
-      if (!onboarded) router.replace('/onboarding');
+      if (needsAccount && !token) router.replace('/sign-in' as Href);
+      else if (!onboarded) router.replace('/onboarding');
       else if (!promptSeen && permission !== 'granted') router.replace('/permission');
       else router.replace('/map');
     }, reduced ? 0 : 1100);
     return () => clearTimeout(timer);
-  }, [ready, onboarded, promptSeen, permission, reduced, router]);
+  }, [ready, needsAccount, token, onboarded, promptSeen, permission, reduced, router]);
 
   return (
     <Pressable accessibilityRole="button" accessibilityLabel="Open Arah" onPress={continueToApp} style={[styles.screen, { backgroundColor: theme.colors.ink }]}>

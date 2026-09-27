@@ -1,18 +1,20 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
-export type AdminSession = {
+export type UserSession = {
   id: string;
   email: string;
 };
 
-export function signAdminToken(session: AdminSession, secret: string, now = Date.now()): string {
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+export function signUserToken(session: UserSession, secret: string, now = Date.now()): string {
   const header = base64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const payload = base64Url(JSON.stringify({ sub: session.id, email: session.email, kind: 'admin', exp: now + 12 * 60 * 60 * 1000 }));
+  const payload = base64Url(JSON.stringify({ sub: session.id, email: session.email, kind: 'user', exp: now + THIRTY_DAYS_MS }));
   const signature = sign(`${header}.${payload}`, secret);
   return `${header}.${payload}.${signature}`;
 }
 
-export function readAdminToken(token: string, secret: string, now = Date.now()): AdminSession | null {
+export function readUserToken(token: string, secret: string, now = Date.now()): UserSession | null {
   const parts = token.split('.');
   if (parts.length !== 3) return null;
   const [header, payload, signature] = parts;
@@ -23,22 +25,13 @@ export function readAdminToken(token: string, secret: string, now = Date.now()):
   if (left.length !== right.length || !timingSafeEqual(left, right)) return null;
   try {
     const body = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as { sub?: unknown; email?: unknown; exp?: unknown; kind?: unknown };
-    if (body.kind === 'user') return null;
+    if (body.kind !== 'user') return null;
     if (typeof body.sub !== 'string' || typeof body.email !== 'string' || typeof body.exp !== 'number') return null;
     if (body.exp <= now) return null;
     return { id: body.sub, email: body.email };
   } catch {
     return null;
   }
-}
-
-export function readCookie(header: string | undefined, name: string): string | null {
-  if (!header) return null;
-  for (const part of header.split(';')) {
-    const [key, ...rest] = part.trim().split('=');
-    if (key === name) return decodeURIComponent(rest.join('='));
-  }
-  return null;
 }
 
 function sign(value: string, secret: string): string {
