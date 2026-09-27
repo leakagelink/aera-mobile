@@ -62,10 +62,10 @@ function text(value) {
   return value == null || value === '' ? '—' : String(value);
 }
 
-async function render(view) {
+async function render(view, selectedProvider) {
   main.replaceChildren();
   if (view === 'dashboard') return renderDashboard();
-  if (view === 'providers') return renderProviders();
+  if (view === 'providers') return renderProviders(selectedProvider);
   if (view === 'health') return renderHealth();
   if (view === 'audit') return renderAudit();
   return renderSettings();
@@ -95,7 +95,8 @@ async function renderDashboard() {
     const card = document.createElement('article');
     card.className = 'card';
     const status = saved?.status || 'NOT CONFIGURED';
-    card.innerHTML = `<p>${entry.name}</p><strong class="${status}">${status}</strong><p class="status">Last checked ${text(saved?.lastTestedAt)}<br>Latency ${text(saved?.lastTestLatencyMs)} ms<br>Last success ${text(saved?.lastSuccessAt)}<br>${text(saved?.lastTestMessage)}</p>`;
+    const keyLine = saved?.apiKeyConfigured ? `Key stored ••••••••${saved.apiKeyLast4 || ''}` : 'No key stored';
+    card.innerHTML = `<p>${entry.name}</p><strong class="${status}">${status}</strong><p class="status">${saved?.enabled ? 'Enabled on' : 'Enabled off'}<br>${keyLine}<br>Default ${saved?.isDefault ? 'on' : 'off'}<br>Last checked ${text(saved?.lastTestedAt)}<br>Latency ${text(saved?.lastTestLatencyMs)} ms<br>Last success ${text(saved?.lastSuccessAt)}<br>${text(saved?.lastTestMessage)}</p>`;
     grid.append(card);
   }
   section.append(grid);
@@ -111,7 +112,7 @@ async function renderDashboard() {
   main.append(section);
 }
 
-async function renderProviders() {
+async function renderProviders(selectedProvider = 'openweather') {
   const [catalog, providers] = await Promise.all([api('/api/v1/admin/providers/catalog'), api('/api/v1/admin/providers')]);
   const section = document.createElement('section');
   section.innerHTML = '<h1>Providers</h1>';
@@ -120,18 +121,24 @@ async function renderProviders() {
   const list = document.createElement('div');
   list.className = 'provider-list';
   const formHost = document.createElement('div');
+  const show = (provider) => {
+    const entry = catalog.find((item) => item.provider === provider) || catalog[0];
+    formHost.replaceChildren(providerForm(entry, providers.find((item) => item.provider === entry.provider)));
+    for (const button of list.querySelectorAll('button')) button.classList.toggle('active', button.dataset.provider === entry.provider);
+  };
   for (const entry of catalog) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'ghost';
+    button.dataset.provider = entry.provider;
     button.textContent = `${entry.name}`;
-    button.addEventListener('click', () => formHost.replaceChildren(providerForm(entry, providers.find((item) => item.provider === entry.provider))));
+    button.addEventListener('click', () => show(entry.provider));
     list.append(button);
   }
   split.append(list, formHost);
   section.append(split);
-  formHost.append(providerForm(catalog.find((entry) => entry.provider === 'openweather'), providers.find((item) => item.provider === 'openweather')));
   main.append(section);
+  show(selectedProvider);
 }
 
 function providerForm(entry, saved) {
@@ -175,8 +182,9 @@ function providerForm(entry, saved) {
       if (saved?.id) await api(`/api/v1/admin/providers/${saved.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
       else await api('/api/v1/admin/providers', { method: 'POST', body: JSON.stringify(payload) });
       form.elements.apiKey.value = '';
-      message.textContent = 'Saved.';
-      await render('providers');
+      await render('providers', entry.provider);
+      const note = main.querySelector('[data-message]');
+      if (note) note.textContent = 'Saved.';
     } catch (error) {
       message.textContent = error.message;
     }
@@ -189,8 +197,9 @@ function providerForm(entry, saved) {
     }
     try {
       const result = await api(`/api/v1/admin/providers/${saved.id}/test`, { method: 'POST' });
-      message.textContent = `${result.message} (${result.latencyMs} ms)`;
-      await render('providers');
+      await render('providers', entry.provider);
+      const note = main.querySelector('[data-message]');
+      if (note) note.textContent = `${result.message} (${result.latencyMs} ms)`;
     } catch (error) {
       message.textContent = error.message;
     }

@@ -77,9 +77,9 @@ export class ProviderConfigService {
     const existing = await this.providers.findByProvider(input.provider);
     if (existing) throw new BadRequestException('That provider is already configured.');
     const secret = this.encryptIfPresent(input.apiKey);
-    const isDefault = false;
     const id = crypto.randomUUID();
-    if (input.isDefault) throw new BadRequestException('Test the provider before making it the default.');
+    const isDefault = Boolean(input.isDefault);
+    if (isDefault) await this.providers.clearDefault(input.providerType, id);
     await this.providers.insert({
       id,
       provider: input.provider,
@@ -104,13 +104,7 @@ export class ProviderConfigService {
     const providerType = input.providerType ?? current.provider_type;
     this.assertPair(provider, providerType);
     const nextKey = resolveKeyUpdate(input.apiKey, current, this.encryption, this.config.secretEncryptionKey);
-    let isDefault = input.isDefault ?? current.is_default;
-    if (isDefault && current.last_test_status !== 'success' && input.isDefault === true) {
-      throw new BadRequestException('Test the provider before making it the default.');
-    }
-    if (!isDefault) {
-      /* keep the stored flag when the caller omits it */
-    }
+    const isDefault = input.isDefault ?? current.is_default;
     if (input.isDefault === true) {
       await this.providers.clearDefault(providerType, id);
     }

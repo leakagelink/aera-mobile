@@ -1,5 +1,3 @@
-import { BadRequestException } from '@nestjs/common';
-
 import type { AppConfig } from '../../config/load-config';
 import { SecretEncryptionService } from '../../security/secret-encryption.service';
 import { ProviderConfigService } from './provider-config.service';
@@ -68,10 +66,55 @@ describe('ProviderConfigService', () => {
     expect(repository.update).toHaveBeenCalledWith(current.id, expect.objectContaining({ apiKeyEncrypted: current.api_key_encrypted, apiKeyLast4: '1234' }));
   });
 
-  it('refuses to mark an untested provider as the default', async () => {
-    const current = row();
-    const { service: configs } = service(current);
-    await expect(configs.update(current.id, { isDefault: true })).rejects.toBeInstanceOf(BadRequestException);
+  it('stores the key and enabled flag when default is turned on before a test', async () => {
+    const current = row({ provider: 'gemini', provider_type: 'ai', name: 'Gemini', enabled: false, api_key_encrypted: null, api_key_last4: null });
+    const { service: configs, repository } = service(current);
+    await configs.update(current.id, { isDefault: true, enabled: true, apiKey: 'gemini-key-1234' });
+    expect(repository.clearDefault).toHaveBeenCalledWith('ai', current.id);
+    expect(repository.update).toHaveBeenCalledWith(
+      current.id,
+      expect.objectContaining({ isDefault: true, enabled: true, apiKeyLast4: '1234' }),
+    );
+  });
+
+  it('creates a provider as the default before any test and keeps the key', async () => {
+    let stored: ProviderRow | null = null;
+    const repository = {
+      findByProvider: jest.fn(async () => null),
+      findById: jest.fn(async () => stored),
+      insert: jest.fn(async (input: { id: string; provider: string; providerType: ProviderRow['provider_type']; name: string; baseUrl: string; apiKeyEncrypted: string | null; apiKeyLast4: string | null; model: string | null; enabled: boolean; isDefault: boolean; timeoutMs: number }) => {
+        stored = row({
+          id: input.id,
+          provider: input.provider,
+          provider_type: input.providerType,
+          name: input.name,
+          base_url: input.baseUrl,
+          api_key_encrypted: input.apiKeyEncrypted,
+          api_key_last4: input.apiKeyLast4,
+          model: input.model,
+          enabled: input.enabled,
+          is_default: input.isDefault,
+          timeout_ms: input.timeoutMs,
+        });
+      }),
+      clearDefault: jest.fn(),
+    };
+    const configs = new ProviderConfigService(repository as never, encryption, { secretEncryptionKey: key } as AppConfig);
+    const created = await configs.create({
+      provider: 'gemini',
+      providerType: 'ai',
+      name: 'Gemini',
+      baseUrl: 'https://generativelanguage.googleapis.com',
+      apiKey: 'gemini-key-1234',
+      enabled: true,
+      isDefault: true,
+      timeoutMs: 10000,
+    });
+    expect(created.enabled).toBe(true);
+    expect(created.isDefault).toBe(true);
+    expect(created.apiKeyConfigured).toBe(true);
+    expect(created.apiKeyLast4).toBe('1234');
+    expect(JSON.stringify(created)).not.toContain('gemini-key-1234');
   });
 
   it('uses the database row before the environment fallback', async () => {
