@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const DEFAULT_MAP_STYLE = 'https://tiles.openfreemap.org/styles/dark';
 const DEFAULT_NOMINATIM = 'https://nominatim.openstreetmap.org';
-const DEFAULT_USER_AGENT = 'AeraMobile/1.0 (https://github.com/leakagelink/aera-mobile)';
+const DEFAULT_USER_AGENT = 'ArahMobile/1.0 (https://github.com/leakagelink/aera-mobile)';
 const DEFAULT_OSRM = 'https://router.project-osrm.org';
 
 const urlSchema = z.url();

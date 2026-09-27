@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Aera",
+    "name": "Arah",
     "slug": "aera-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -12,7 +12,7 @@
       "supportsTablet": false,
       "icon": "./assets/expo.icon",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Aera uses your location while the app is open to show where you are, calculate routes, and record a trip after you start one.",
+        "NSLocationWhenInUseUsageDescription": "Arah uses your location while the app is open to show where you are, calculate routes, and record a trip after you start one.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -41,7 +41,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Aera uses your location while the app is open to show where you are, calculate routes, and record a trip after you start one.",
+          "locationWhenInUsePermission": "Arah uses your location while the app is open to show where you are, calculate routes, and record a trip after you start one.",
           "isAndroidBackgroundLocationEnabled": false,
           "isIosBackgroundLocationEnabled": false,
           "isAndroidForegroundServiceEnabled": false

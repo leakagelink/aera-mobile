@@ -18,7 +18,7 @@ const steps = [
   },
   {
     title: 'Compare the way there.',
-    copy: 'Aera asks the road network for distance, time, and alternatives.',
+    copy: 'Arah asks the road network for distance, time, and alternatives.',
     icon: Search,
   },
   {

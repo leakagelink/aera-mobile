@@ -15,7 +15,7 @@ export default function AiScreen() {
         Talk to your map
       </AppText>
       <AppText size={15} color={theme.colors.mutedForeground} style={styles.copy}>
-        Conversational guidance is a later Aera release. This version navigates, compares real routes, and records trips you start.
+        Conversational guidance is a later Arah release. This version navigates, compares real routes, and records trips you start.
       </AppText>
       <GlassCard padded style={styles.card}>
         <View style={[styles.icon, { backgroundColor: theme.colors.primary }]}>
@@ -25,7 +25,7 @@ export default function AiScreen() {
           Coming later
         </AppText>
         <AppText size={14} color={theme.colors.mutedForeground} style={styles.cardCopy}>
-          There is no assistant connected yet, so Aera will not invent answers about traffic, voice, or your trips.
+          There is no assistant connected yet, so Arah will not invent answers about traffic, voice, or your trips.
         </AppText>
       </GlassCard>
     </View>

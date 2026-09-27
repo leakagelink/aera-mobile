@@ -34,7 +34,7 @@ const unavailableTraffic: TrafficProvider = {
 function requireProvider(configured: string, supported: string, label: string): void {
   if (configured === supported) return;
   throw new AppError(
-    `The ${label} provider "${configured}" is not connected yet. Keep ${supported} until the Aera service is available.`,
+    `The ${label} provider "${configured}" is not connected yet. Keep ${supported} until the Arah service is available.`,
     'unavailable',
   );
 }

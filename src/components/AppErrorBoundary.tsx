@@ -18,7 +18,7 @@ export class AppErrorBoundary extends Component<Props, State> {
       return (
         <View style={{ flex: 1 }}>
           <ErrorState
-            title="Aera hit a problem"
+            title="Arah hit a problem"
             message="The screen stopped unexpectedly. You can try it again."
             actionLabel="Try again"
             onAction={() => this.setState({ error: null })}

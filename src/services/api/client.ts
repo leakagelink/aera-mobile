@@ -15,7 +15,7 @@ export function aeraApiBaseUrl(): string | null {
 export async function aeraApiRequest(path: string, init?: { method?: string; body?: unknown; signal?: AbortSignal }): Promise<unknown> {
   const baseUrl = env.aeraApiBaseUrl;
   if (!baseUrl) {
-    throw new AppError('The Aera API is not configured. Search and routing stay on the direct development providers.', 'unavailable');
+    throw new AppError('The Arah API is not configured. Search and routing stay on the direct development providers.', 'unavailable');
   }
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (init?.body !== undefined) headers['Content-Type'] = 'application/json';

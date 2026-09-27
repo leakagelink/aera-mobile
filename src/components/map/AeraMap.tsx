@@ -68,7 +68,7 @@ export const AeraMap = forwardRef<AeraMapHandle, Props>(function AeraMap({ user,
   if (Platform.OS === 'web') {
     return (
       <ErrorState
-        title="Open Aera on a phone"
+        title="Open Arah on a phone"
         message="The live map runs in the iOS and Android development build."
       />
     );

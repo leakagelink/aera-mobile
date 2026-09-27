@@ -33,11 +33,11 @@ export default function PrivacyScreen() {
             Your journey stays on this device.
           </AppText>
           <AppText size={14} color={theme.colors.mutedForeground} style={styles.copy}>
-            Aera requests location only while a map or navigation screen is open. A trip is recorded only after you start navigation. There is no account, advertising, or analytics in this version.
+            Arah requests location only while a map or navigation screen is open. A trip is recorded only after you start navigation. There is no account, advertising, or analytics in this version.
           </AppText>
         </View>
         <Info title="Foreground location" detail={permission === 'granted' ? (watching ? 'On while this flow needs it' : 'Allowed, not currently watching') : permission === 'denied' ? 'Denied' : 'Not requested yet'} />
-        <Info title="Background location" detail="Not used. Aera does not track you when the app is closed or in the background." />
+        <Info title="Background location" detail="Not used. Arah does not track you when the app is closed or in the background." />
         <Info title="Trip storage" detail="Samples and metrics are kept in local storage so a later version can sync them if you choose." />
         <Pressable accessibilityRole="button" onPress={() => void Linking.openSettings()} style={[styles.action, { backgroundColor: theme.colors.surface }]}>
           <AppText size={15} weight="semibold">

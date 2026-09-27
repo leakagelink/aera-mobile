@@ -2,7 +2,7 @@
   "name": "aera-backend",
   "version": "0.1.0",
   "private": true,
-  "description": "Aera API. A modular NestJS service for PostgreSQL/PostGIS and Redis.",
+  "description": "Arah API. A modular NestJS service for PostgreSQL/PostGIS and Redis.",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/main.js",

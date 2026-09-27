@@ -38,7 +38,7 @@ export default function PermissionRoute() {
           Your location powers the journey.
         </AppText>
         <AppText size={16} color={theme.colors.mutedForeground} style={styles.copy}>
-          Aera uses foreground location to show your position, calculate a route, and record a trip only after you start one. It does not track you in the background.
+          Arah uses foreground location to show your position, calculate a route, and record a trip only after you start one. It does not track you in the background.
         </AppText>
         <View style={[styles.note, { backgroundColor: `${theme.colors.success}1A` }]}>
           <ShieldCheck color={theme.colors.success} size={16} />

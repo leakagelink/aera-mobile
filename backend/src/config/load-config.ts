@@ -47,7 +47,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
     trustProxy: env.TRUST_PROXY === 'true',
     geocodingProvider,
     geocodingBaseUrl: trimSlash(readUrl(env.GEOCODING_BASE_URL, 'https://nominatim.openstreetmap.org', 'GEOCODING_BASE_URL')),
-    geocodingUserAgent: env.GEOCODING_USER_AGENT?.trim() || 'AeraBackend/1.0 (https://github.com/leakagelink/aera-mobile)',
+    geocodingUserAgent: env.GEOCODING_USER_AGENT?.trim() || 'ArahBackend/1.0 (https://github.com/leakagelink/aera-mobile)',
     routingProvider,
     routingBaseUrl: trimSlash(readUrl(env.ROUTING_BASE_URL, 'https://router.project-osrm.org', 'ROUTING_BASE_URL')),
   };

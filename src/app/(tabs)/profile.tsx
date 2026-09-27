@@ -46,7 +46,7 @@ export default function ProfileScreen() {
         <Row icon={ShieldCheck} label="Privacy" onPress={() => router.push('/privacy')} />
         <Row icon={MapPin} label="Location access" onPress={() => router.push('/permission')} />
         <Row icon={Settings2} label="Settings" onPress={() => router.push('/settings')} />
-        <Row icon={Info} label="About Aera" detail="Phase 1 navigation" />
+        <Row icon={Info} label="About Arah" detail="Phase 1 navigation" />
       </View>
     </ScrollView>
   );

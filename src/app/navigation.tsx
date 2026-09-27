@@ -86,7 +86,7 @@ export default function NavigationScreen() {
   }
 
   function confirmEnd() {
-    Alert.alert('End this trip?', 'Aera will save the journey recorded since you started.', [
+    Alert.alert('End this trip?', 'Arah will save the journey recorded since you started.', [
       { text: 'Keep going', style: 'cancel' },
       { text: 'End trip', style: 'destructive', onPress: () => void finish() },
     ]);

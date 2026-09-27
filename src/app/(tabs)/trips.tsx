@@ -71,7 +71,7 @@ export default function TripsScreen() {
             No trips yet
           </AppText>
           <AppText size={14} color={theme.colors.mutedForeground} style={styles.emptyCopy}>
-            Start navigation from the map. Aera records the trip only after you choose to begin.
+            Start navigation from the map. Arah records the trip only after you choose to begin.
           </AppText>
         </View>
       ) : null}

@@ -44,10 +44,10 @@ export default function SplashRoute() {
   }, [ready, onboarded, promptSeen, permission, reduced, router]);
 
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel="Open Aera" onPress={continueToApp} style={[styles.screen, { backgroundColor: theme.colors.ink }]}>
+    <Pressable accessibilityRole="button" accessibilityLabel="Open Arah" onPress={continueToApp} style={[styles.screen, { backgroundColor: theme.colors.ink }]}>
       <LogoMark large />
       <AppText size={48} weight="semibold" color={theme.colors.hero} style={styles.title}>
-        Aera
+        Arah
       </AppText>
       <AppText size={16} color={theme.colors.heroMuted}>
         Talk to your map.

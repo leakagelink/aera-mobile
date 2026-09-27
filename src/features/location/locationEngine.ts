@@ -45,7 +45,7 @@ export async function requestForegroundPermission(): Promise<PermissionState> {
     permission,
     canAskAgain: result.canAskAgain,
     permissionKnown: true,
-    error: permission === 'denied' ? 'Location permission is off. Aera only uses it while the app is open.' : null,
+    error: permission === 'denied' ? 'Location permission is off. Arah only uses it while the app is open.' : null,
   });
   if (permission === 'granted') void syncWatch();
   return permission;
