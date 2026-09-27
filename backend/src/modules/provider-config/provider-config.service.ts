@@ -76,6 +76,7 @@ export class ProviderConfigService {
     this.assertPair(input.provider, input.providerType);
     const existing = await this.providers.findByProvider(input.provider);
     if (existing) throw new BadRequestException('That provider is already configured.');
+    await this.assertDistinctKey(input.provider, input.apiKey);
     const secret = this.encryptIfPresent(input.apiKey);
     const id = crypto.randomUUID();
     const isDefault = Boolean(input.isDefault);
@@ -103,6 +104,7 @@ export class ProviderConfigService {
     const provider = (input.provider ?? current.provider) as ProviderSlug;
     const providerType = input.providerType ?? current.provider_type;
     this.assertPair(provider, providerType);
+    await this.assertDistinctKey(provider, input.apiKey);
     const nextKey = resolveKeyUpdate(input.apiKey, current, this.encryption, this.config.secretEncryptionKey);
     const isDefault = input.isDefault ?? current.is_default;
     if (input.isDefault === true) {
@@ -214,6 +216,24 @@ export class ProviderConfigService {
       lastSuccessAt: row.last_success_at?.toISOString() ?? null,
       status: providerStatus({ configured, enabled: row.enabled, lastTestStatus: row.last_test_status }),
     };
+  }
+
+  private async assertDistinctKey(provider: string, apiKey: string | undefined): Promise<void> {
+    const trimmed = apiKey?.trim();
+    if (!trimmed) return;
+    const rows = await this.providers.list();
+    for (const row of rows) {
+      if (row.provider === provider || !row.api_key_encrypted) continue;
+      let stored = '';
+      try {
+        stored = this.decryptStored(row.api_key_encrypted);
+      } catch {
+        continue;
+      }
+      if (stored === trimmed) {
+        throw new BadRequestException(`This key is already saved for ${row.name}. Each provider needs its own key.`);
+      }
+    }
   }
 
   private async activeKeyed(type: ProviderType, slug: ProviderSlug, envKey: string | null, fallbackUrl: string, model: string | null): Promise<(ResolvedProvider & { model: string }) | null> {

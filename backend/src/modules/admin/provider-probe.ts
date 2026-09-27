@@ -1,5 +1,6 @@
 import type { AppConfig } from '../../config/load-config';
 import { OpenWeatherProvider } from '../../providers/openweather.provider';
+import { TomTomTrafficProvider } from '../../providers/tomtom-traffic.provider';
 import type { ProviderSlug } from '../../providers/catalog';
 import { WeatherProviderError } from '../../security/weather-errors';
 
@@ -41,10 +42,14 @@ export async function probeProvider(provider: ProviderSlug, target: { baseUrl: s
 
 async function probeTomTom(target: { baseUrl: string; apiKey: string | null; timeoutMs: number }, started: number): Promise<ProbeResult> {
   if (!target.apiKey) return done(started, false, 'TomTom is not configured');
-  const url = new URL('/search/2/geocode/Indore.json', ensureSlash(target.baseUrl));
-  url.searchParams.set('key', target.apiKey);
-  const status = await statusOnly(url.toString(), target.timeoutMs);
-  return done(started, status >= 200 && status < 300, status === 401 || status === 403 ? 'TomTom connection failed' : status >= 200 && status < 300 ? 'TomTom connection successful' : 'TomTom connection failed');
+  const report = await new TomTomTrafficProvider().report({
+    latitude: TEST_LATITUDE,
+    longitude: TEST_LONGITUDE,
+    baseUrl: target.baseUrl,
+    apiKey: target.apiKey,
+    timeoutMs: target.timeoutMs,
+  });
+  return done(started, report.available, report.available ? 'TomTom connection successful' : 'TomTom connection failed');
 }
 
 async function probeGemini(target: { baseUrl: string; apiKey: string | null; timeoutMs: number }, started: number): Promise<ProbeResult> {

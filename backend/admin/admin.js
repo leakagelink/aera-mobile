@@ -150,7 +150,8 @@ function providerForm(entry, saved) {
     <label>Enabled <select name="enabled"><option value="true">ON</option><option value="false">OFF</option></select></label>
     <label>Default <select name="isDefault"><option value="false">OFF</option><option value="true">ON</option></select></label>
     <label>Base URL <input name="baseUrl" required /></label>
-    <label>API key <input name="apiKey" type="password" autocomplete="new-password" placeholder="Leave empty to keep the current key" /></label>
+    <label>API key <input name="apiKey" type="password" autocomplete="off" placeholder="Leave empty to keep the current key" /></label>
+    <p class="status">Paste only the ${entry.name} key. OpenWeather, TomTom, and Gemini each keep a different key.</p>
     <p class="status" data-key></p>
     <label>Model <input name="model" /></label>
     <label>Timeout (ms) <input name="timeoutMs" type="number" min="1000" max="30000" required /></label>

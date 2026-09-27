@@ -80,6 +80,7 @@ describe('ProviderConfigService', () => {
   it('creates a provider as the default before any test and keeps the key', async () => {
     let stored: ProviderRow | null = null;
     const repository = {
+      list: jest.fn(async () => []),
       findByProvider: jest.fn(async () => null),
       findById: jest.fn(async () => stored),
       insert: jest.fn(async (input: { id: string; provider: string; providerType: ProviderRow['provider_type']; name: string; baseUrl: string; apiKeyEncrypted: string | null; apiKeyLast4: string | null; model: string | null; enabled: boolean; isDefault: boolean; timeoutMs: number }) => {
@@ -115,6 +116,27 @@ describe('ProviderConfigService', () => {
     expect(created.apiKeyConfigured).toBe(true);
     expect(created.apiKeyLast4).toBe('1234');
     expect(JSON.stringify(created)).not.toContain('gemini-key-1234');
+  });
+
+  it('rejects a key that is already saved for another provider', async () => {
+    const weather = row();
+    const tomtom = row({
+      id: '22222222-2222-4222-8222-222222222222',
+      provider: 'tomtom',
+      provider_type: 'traffic',
+      name: 'TomTom',
+      api_key_encrypted: null,
+      api_key_last4: null,
+    });
+    const repository = {
+      list: jest.fn(async () => [weather, tomtom]),
+      findById: jest.fn(async () => tomtom),
+      update: jest.fn(),
+      clearDefault: jest.fn(),
+    };
+    const configs = new ProviderConfigService(repository as never, encryption, { secretEncryptionKey: key } as AppConfig);
+    await expect(configs.update(tomtom.id, { apiKey: 'test-key-1234' })).rejects.toThrow('already saved for OpenWeather');
+    expect(repository.update).not.toHaveBeenCalled();
   });
 
   it('uses the database row before the environment fallback', async () => {
