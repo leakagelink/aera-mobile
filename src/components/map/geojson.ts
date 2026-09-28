@@ -39,6 +39,26 @@ export function lineCollection(lines: { coordinates: Coordinate[] }[]): LineColl
   };
 }
 
+export type NamedPointCollection = {
+  type: 'FeatureCollection';
+  features: {
+    type: 'Feature';
+    properties: { name: string };
+    geometry: { type: 'Point'; coordinates: [number, number] };
+  }[];
+};
+
+export function namedPoints(points: { name: string; latitude: number; longitude: number }[]): NamedPointCollection {
+  return {
+    type: 'FeatureCollection',
+    features: points.map((point) => ({
+      type: 'Feature',
+      properties: { name: point.name },
+      geometry: { type: 'Point', coordinates: [point.longitude, point.latitude] },
+    })),
+  };
+}
+
 export function pointFeature(coordinate: Coordinate): PointFeature {
   return {
     type: 'Feature',

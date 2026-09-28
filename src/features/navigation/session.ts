@@ -1,4 +1,5 @@
 import { geocodingProvider } from '@/services/providers';
+import { travelModeLabel } from '@/types/travel';
 import { useLocationStore } from '@/store/locationStore';
 import { selectedRoute, useSessionStore } from '@/store/sessionStore';
 import { useTripStore } from '@/store/tripStore';
@@ -13,12 +14,14 @@ export async function beginNavigation(): Promise<void> {
     throw new AppError('A location, destination, and route are required before navigation can start.', 'invalid');
   }
 
-  let originName = 'Current location';
-  try {
-    const place = await geocodingProvider().reverse(location);
-    if (place?.name) originName = place.name;
-  } catch {
-    originName = 'Current location';
+  let originName = session.origin?.name ?? 'Current location';
+  if (!session.origin) {
+    try {
+      const place = await geocodingProvider().reverse(location);
+      if (place?.name) originName = place.name;
+    } catch {
+      originName = 'Current location';
+    }
   }
 
   const initialSample: TripSample = {
@@ -34,7 +37,7 @@ export async function beginNavigation(): Promise<void> {
   await useTripStore.getState().startDraft({
     originName,
     destinationName: session.destination.name,
-    routeSummary: route.summary,
+    routeSummary: `${travelModeLabel(session.travelMode)} · ${route.summary}`,
     routeProvider: route.provider,
     plannedGeometry: route.geometry,
     initialSample,

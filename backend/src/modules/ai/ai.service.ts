@@ -3,7 +3,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { RedisService } from '../../cache/redis.service';
 import { APP_CONFIG } from '../../config/config.module';
 import type { AppConfig } from '../../config/load-config';
-import { GeminiProvider, aiError, type GeminiContent } from '../../providers/gemini.provider';
+import { GeminiProvider, aiError, type GeminiContent, type GeminiFunctionCall, type GeminiTurn } from '../../providers/gemini.provider';
 import { ProviderConfigService } from '../provider-config/provider-config.service';
 import { ArahToolRegistry, type AiClientContext, type ToolActivity } from './tool-registry';
 
@@ -69,10 +69,19 @@ export class AiService {
         if (rejected >= 2) {
           return { message: 'I could not complete that request with the available Arah tools.', toolCalls };
         }
-        responses.push({ functionResponse: { name: call.name, response: executed.result } });
+        responses.push({
+          functionResponse: {
+            name: call.name,
+            ...(call.id ? { id: call.id } : {}),
+            response: executed.result,
+          },
+        });
       }
-      contents.push({ role: 'model', parts: calls.map((call) => ({ functionCall: { name: call.name, args: call.args } })) });
-      contents.push({ role: 'user', parts: responses });
+      contents.push({ role: 'model', parts: modelPartsFor(turn, calls) });
+      contents.push({
+        role: 'user',
+        parts: responses,
+      });
     }
     return { message: 'I could not finish that request within the lookup limit.', toolCalls };
   }
@@ -87,4 +96,19 @@ export class AiService {
       });
     return [...prior, { role: 'user', parts: [{ text: message }] }];
   }
+}
+
+function modelPartsFor(turn: GeminiTurn, calls: GeminiFunctionCall[]): Record<string, unknown>[] {
+  const raw = turn.modelParts ?? [];
+  const functionParts = raw.filter((part) => 'functionCall' in part);
+  if (functionParts.length > 0 && functionParts.length <= calls.length) return raw;
+  if (functionParts.length > calls.length) {
+    let kept = 0;
+    return raw.filter((part) => {
+      if (!('functionCall' in part)) return true;
+      kept += 1;
+      return kept <= calls.length;
+    });
+  }
+  return calls.map((call) => ({ functionCall: { name: call.name, args: call.args, ...(call.id ? { id: call.id } : {}) } }));
 }

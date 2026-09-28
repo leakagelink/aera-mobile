@@ -3,11 +3,13 @@ import { ArahException } from '../security/weather-errors';
 export type GeminiFunctionCall = {
   name: string;
   args: Record<string, unknown>;
+  id?: string;
 };
 
 export type GeminiTurn = {
   text: string | null;
   functionCalls: GeminiFunctionCall[];
+  modelParts: Record<string, unknown>[];
 };
 
 export type GeminiToolDeclaration = {
@@ -37,11 +39,13 @@ export class GeminiProvider {
   }): Promise<GeminiTurn> {
     if (!input.apiKey.trim()) throw aiError('GEMINI_NOT_CONFIGURED', 'The assistant is not configured.', 503);
     const url = new URL(`/v1beta/models/${encodeURIComponent(input.model)}:generateContent`, ensureSlash(input.baseUrl));
+    const generationConfig: Record<string, unknown> = { maxOutputTokens: 2048, temperature: 0.2 };
+    if (input.model.startsWith('gemini-3')) generationConfig.thinkingConfig = { thinkingLevel: 'low' };
     const body = JSON.stringify({
       systemInstruction: { parts: [{ text: input.system }] },
       contents: input.contents,
       tools: [{ functionDeclarations: input.tools }],
-      generationConfig: { maxOutputTokens: 800, temperature: 0.2 },
+      generationConfig,
     });
     if (body.includes(input.apiKey)) throw aiError('GEMINI_AUTH_FAILED', 'The assistant request was rejected.', 502);
     let response: { status: number; body: unknown };
@@ -71,15 +75,16 @@ function parseTurn(payload: unknown): GeminiTurn {
     .filter(Boolean)
     .join('\n')
     .trim();
-  const functionCalls = parts.flatMap((part) => {
-    if (!part || typeof part !== 'object' || !('functionCall' in part)) return [];
-    const call = (part as { functionCall?: { name?: unknown; args?: unknown } }).functionCall;
+  const modelParts = parts.filter((part): part is Record<string, unknown> => Boolean(part) && typeof part === 'object');
+  const functionCalls = modelParts.flatMap((part) => {
+    if (!('functionCall' in part)) return [];
+    const call = part.functionCall as { name?: unknown; args?: unknown; id?: unknown } | undefined;
     if (!call || typeof call.name !== 'string') return [];
     const args = call.args && typeof call.args === 'object' && !Array.isArray(call.args) ? (call.args as Record<string, unknown>) : {};
-    return [{ name: call.name, args }];
+    return [{ name: call.name, args, ...(typeof call.id === 'string' ? { id: call.id } : {}) }];
   });
   if (!text && functionCalls.length === 0) throw aiError('GEMINI_UNAVAILABLE', 'The assistant returned an empty response.', 502);
-  return { text: text || null, functionCalls };
+  return { text: text || null, functionCalls, modelParts };
 }
 
 function ensureSlash(baseUrl: string): string {

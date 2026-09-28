@@ -15,10 +15,10 @@ export function MetricCard({ label, value, unit, compact = false }: Props) {
   const theme = useTheme();
   return (
     <View style={[styles.card, compact ? styles.compact : styles.regular, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-      <AppText size={11} weight="medium" color={theme.colors.mutedForeground} style={styles.label}>
+      <AppText size={11} weight="medium" color={theme.colors.mutedForeground} numberOfLines={2} style={styles.label}>
         {label}
       </AppText>
-      <AppText size={compact ? 20 : 24} weight="semibold" tabular style={styles.value}>
+      <AppText size={compact ? 20 : 24} weight="semibold" tabular numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={styles.value}>
         {value}
         {unit ? (
           <AppText size={12} weight="medium" color={theme.colors.mutedForeground}>
@@ -36,6 +36,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     flex: 1,
+    minWidth: 0,
+    alignSelf: 'stretch',
   },
   compact: { padding: 12 },
   regular: { padding: 16 },

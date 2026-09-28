@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import express, { json, urlencoded } from 'express';
+import express, { json, urlencoded, type Request, type Response } from 'express';
 import helmet from 'helmet';
 
 import { AppModule } from './app.module';
@@ -18,6 +18,16 @@ async function bootstrap(): Promise<void> {
   const config = app.get<AppConfig>(APP_CONFIG);
   if (config.trustProxy) app.getHttpAdapter().getInstance().set('trust proxy', 1);
   app.use(helmet());
+  const server = app.getHttpAdapter().getInstance();
+  const legalDir = join(process.cwd(), 'legal');
+  server.use('/legal', express.static(legalDir));
+  const sendLegal = (file: string) => (_request: Request, response: Response) => {
+    response.sendFile(join(legalDir, file));
+  };
+  server.get('/', sendLegal('home.html'));
+  server.get(['/privacy', '/privacy/'], sendLegal('privacy.html'));
+  server.get(['/terms', '/terms/'], sendLegal('terms.html'));
+  server.get(['/account-deletion', '/account-deletion/'], sendLegal('account-deletion.html'));
   app.use('/admin', express.static(join(process.cwd(), 'admin')));
   app.use(json({ limit: '1mb' }));
   app.use(urlencoded({ extended: false, limit: '1mb' }));

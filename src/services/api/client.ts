@@ -13,7 +13,7 @@ export function aeraApiBaseUrl(): string | null {
   return env.aeraApiBaseUrl;
 }
 
-export async function aeraApiRequest(path: string, init?: { method?: string; body?: unknown; signal?: AbortSignal }): Promise<unknown> {
+export async function aeraApiRequest(path: string, init?: { method?: string; body?: unknown; signal?: AbortSignal; timeoutMs?: number }): Promise<unknown> {
   const baseUrl = env.aeraApiBaseUrl;
   if (!baseUrl) {
     throw new AppError('The Arah API is not configured. Search and routing stay on the direct development providers.', 'unavailable');
@@ -28,6 +28,7 @@ export async function aeraApiRequest(path: string, init?: { method?: string; bod
       signal: init?.signal,
       method: init?.method ?? (init?.body === undefined ? 'GET' : 'POST'),
       body: init?.body === undefined ? undefined : JSON.stringify(init.body),
+      timeoutMs: init?.timeoutMs,
     });
   } catch (error) {
     if (error instanceof AppError && error.message === 'Sign in to continue.') useAccountStore.getState().clearSession();

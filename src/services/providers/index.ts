@@ -1,7 +1,8 @@
 import { env } from '@/services/env';
 import { getMapStyleUrl } from '@/services/mapStyle';
 import { reverseGeocode, searchPlaces } from '@/services/nominatim';
-import { fetchDrivingRoutes, matchTrace, nearestRoad } from '@/services/osrm';
+import { fetchRoutes, matchTrace, nearestRoad } from '@/services/osrm';
+import { osrmProfile } from '@/types/travel';
 import type { GeocodingProvider, MapStyleProvider, PlaceSearchProvider, RoutingProvider, TrafficProvider } from '@/services/providers/types';
 import type { TrafficReport } from '@/types/traffic';
 import { AppError } from '@/utils/errors';
@@ -14,7 +15,7 @@ const nominatim: PlaceSearchProvider & GeocodingProvider = {
 
 const osrm: RoutingProvider = {
   id: 'osrm',
-  calculateRoute: fetchDrivingRoutes,
+  calculateRoute: (origin, destination, signal, mode = 'car') => fetchRoutes(origin, destination, osrmProfile(mode), mode, signal),
   nearestRoad,
   matchTrace,
 };

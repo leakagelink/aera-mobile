@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
 
 import type { AppConfig } from '../../config/load-config';
@@ -28,6 +28,32 @@ describe('AdminAuthService', () => {
     const result = await auth.login('admin@example.com', 'correct-password', '127.0.0.1');
     expect(result.session.email).toBe('admin@example.com');
     expect(result.token.split('.')).toHaveLength(3);
+    expect(JSON.stringify(audit.insert.mock.calls)).not.toContain('correct-password');
+  });
+
+  it('changes the login email and password only after the current password matches', async () => {
+    const passwordHash = await bcrypt.hash('correct-password', 4);
+    const stored = { id: 'admin-1', email: 'admin@example.com', password_hash: passwordHash };
+    const database = {
+      query: jest.fn(async (sql: string, params?: unknown[]) => {
+        const text = String(sql);
+        if (text.includes('UPDATE')) {
+          stored.email = String(params?.[1]);
+          stored.password_hash = String(params?.[2]);
+          return { rows: [] };
+        }
+        if (text.includes('id <>')) return { rows: [] };
+        return { rows: [{ ...stored }] };
+      }),
+    };
+    const audit = { insert: jest.fn(async () => undefined) };
+    const auth = new AdminAuthService(database as never, { takeToken: async () => true } as never, audit as never, { adminJwtSecret: secret } as AppConfig);
+    await expect(auth.updateAccount('admin-1', 'wrong-password-value', 'new@example.com', 'next-password', null)).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(auth.updateAccount('admin-1', 'correct-password', undefined, undefined, null)).rejects.toBeInstanceOf(BadRequestException);
+    const updated = await auth.updateAccount('admin-1', 'correct-password', 'New@Example.com', 'next-password', null);
+    expect(updated.session.email).toBe('new@example.com');
+    expect(await bcrypt.compare('next-password', stored.password_hash)).toBe(true);
+    expect(JSON.stringify(audit.insert.mock.calls)).not.toContain('next-password');
     expect(JSON.stringify(audit.insert.mock.calls)).not.toContain('correct-password');
   });
 });

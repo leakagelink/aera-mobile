@@ -8,16 +8,17 @@
     "scheme": "aera",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "bundleIdentifier": "com.leakagelink.aera",
+      "bundleIdentifier": "com.arahmap.socilet",
       "supportsTablet": false,
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon.png",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Arah uses your location while the app is open to show where you are, calculate routes, and record a trip after you start one.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.leakagelink.aera",
+      "package": "com.arahmap.socilet",
+      "googleServicesFile": "./google-services.json",
       "predictiveBackGestureEnabled": false,
       "adaptiveIcon": {
         "backgroundColor": "#0B0E14",
@@ -39,6 +40,14 @@
       "expo-dev-client",
       "@maplibre/maplibre-react-native",
       [
+        "expo-notifications",
+        {
+          "color": "#1496E0",
+          "defaultChannel": "default"
+        }
+      ],
+      "@react-native-google-signin/google-signin",
+      [
         "expo-location",
         {
           "locationWhenInUsePermission": "Arah uses your location while the app is open to show where you are, calculate routes, and record a trip after you start one.",
@@ -52,9 +61,10 @@
         {
           "backgroundColor": "#0B0E14",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 220
         }
-      ]
+      ],
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
       "typedRoutes": true,

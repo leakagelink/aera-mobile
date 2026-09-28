@@ -2,13 +2,17 @@ import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query
 
 import { Admin } from './admin.decorator';
 import { AdminProviderService } from './admin-provider.service';
+import { GoogleIntegrationService } from './google-integration.service';
 import type { AdminRequest } from './admin.guard';
-import { AuditQueryDto, CreateProviderDto, UpdateProviderDto } from './dto';
+import { AuditQueryDto, CreateProviderDto, UpdateGoogleIntegrationDto, UpdateProviderDto } from './dto';
 
 @Admin()
 @Controller('v1/admin')
 export class AdminApiController {
-  constructor(private readonly admin: AdminProviderService) {}
+  constructor(
+    private readonly admin: AdminProviderService,
+    private readonly google: GoogleIntegrationService,
+  ) {}
 
   @Get('providers/catalog')
   catalog() {
@@ -58,6 +62,24 @@ export class AdminApiController {
   @Get('settings')
   settings() {
     return this.admin.settings();
+  }
+
+  @Get('google')
+  googleIntegration() {
+    return this.google.view();
+  }
+
+  @Patch('google')
+  updateGoogle(
+    @Body() body: UpdateGoogleIntegrationDto,
+    @Req() request: AdminRequest,
+  ) {
+    return this.google.update(body, request.admin?.id ?? '', request.ip ?? null);
+  }
+
+  @Post('google/test')
+  testGoogle(@Req() request: AdminRequest) {
+    return this.google.test(request.admin?.id ?? '', request.ip ?? null);
   }
 
   @Get('audit-logs')

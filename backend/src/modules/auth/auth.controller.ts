@@ -20,6 +20,13 @@ class RegisterDto {
   displayName?: string;
 }
 
+class GoogleDto {
+  @IsString()
+  @MinLength(20)
+  @MaxLength(4000)
+  idToken!: string;
+}
+
 class LoginDto {
   @IsEmail()
   @MaxLength(200)
@@ -45,5 +52,17 @@ export class AuthController {
   @Post('login')
   login(@Body() body: LoginDto, @Req() request: { ip?: string }) {
     return this.auth.login(body.email, body.password, request.ip ?? null);
+  }
+
+  @Public()
+  @Post('google')
+  google(@Body() body: GoogleDto, @Req() request: { ip?: string }) {
+    return this.auth.loginWithGoogle(body.idToken, request.ip ?? null);
+  }
+
+  @Public()
+  @Post('delete-account')
+  deleteAccount(@Body() body: LoginDto, @Req() request: { ip?: string }) {
+    return this.auth.deleteAccount(body.email, body.password, request.ip ?? null);
   }
 }

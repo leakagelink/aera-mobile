@@ -5,18 +5,21 @@ import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AeraMap, type AeraMapHandle } from '@/components/map/AeraMap';
+import { TravelModeBar } from '@/components/routing/TravelModeBar';
+import { AppText } from '@/components/ui/AppText';
 import { IconButton, PrimaryButton } from '@/components/ui/Buttons';
 import { RouteCard } from '@/components/ui/RouteCard';
 import { ErrorState, LoadingState } from '@/components/ui/States';
 import { useForegroundLocation } from '@/features/location/useForegroundLocation';
 import { beginNavigation } from '@/features/navigation/session';
-import { useDrivingRoutes } from '@/features/routing/useDrivingRoutes';
+import { useJourneyRoutes } from '@/features/routing/useJourneyRoutes';
 import { useLocationStore } from '@/store/locationStore';
 import { usePreferencesStore } from '@/store/preferencesStore';
 import { selectedRoute, useSessionStore } from '@/store/sessionStore';
 import { useTheme } from '@/theme/useTheme';
 import { errorMessage } from '@/utils/errors';
 import { formatDistance, formatDuration } from '@/utils/format';
+import { distanceMeters } from '@/utils/geo';
 
 export default function RoutesScreen() {
   const focused = useIsFocused();
@@ -27,11 +30,14 @@ export default function RoutesScreen() {
   const mapRef = useRef<AeraMapHandle>(null);
   const units = usePreferencesStore((state) => state.units);
   const location = useLocationStore((state) => state.current);
+  const origin = useSessionStore((state) => state.origin);
   const destination = useSessionStore((state) => state.destination);
   const routes = useSessionStore((state) => state.routes);
   const route = useSessionStore((state) => selectedRoute(state));
   const selectRoute = useSessionStore((state) => state.selectRoute);
-  const query = useDrivingRoutes(Boolean(focused && destination && location));
+  const startPoint = origin ?? location;
+  const query = useJourneyRoutes(Boolean(focused && destination && startPoint));
+  const awayFromStart = Boolean(origin && location && distanceMeters(location, origin) > 200);
   const [starting, setStarting] = useState(false);
 
   useEffect(() => {
@@ -64,6 +70,7 @@ export default function RoutesScreen() {
       <AeraMap
         ref={mapRef}
         user={location}
+        origin={origin}
         destination={destination}
         routes={routes.map((item) => ({ id: item.id, coordinates: item.geometry, selected: item.id === route?.id }))}
       />
@@ -71,6 +78,9 @@ export default function RoutesScreen() {
         <IconButton icon={ArrowLeft} label="Go back" onPress={() => router.back()} />
       </View>
       <View style={[styles.sheet, { backgroundColor: theme.colors.background, paddingBottom: insets.bottom + 12 }]}>
+        <View style={styles.modes}>
+          <TravelModeBar />
+        </View>
         {query.isFetching && routes.length === 0 ? <LoadingState title="Comparing routes" message="Calculating distance and time." /> : null}
         {query.isError && routes.length === 0 ? (
           <ErrorState title="Route unavailable" message={errorMessage(query.error)} actionLabel="Try again" onAction={() => void query.refetch()} />
@@ -90,7 +100,12 @@ export default function RoutesScreen() {
                 />
               ))}
             </ScrollView>
-            <PrimaryButton icon={Navigation} disabled={!route || starting} onPress={() => void start()} style={styles.start}>
+            {awayFromStart ? (
+              <AppText size={13} color={theme.colors.mutedForeground} style={styles.note}>
+                This route starts at {origin?.name}. Set From to your location to start turn-by-turn navigation.
+              </AppText>
+            ) : null}
+            <PrimaryButton icon={Navigation} disabled={!route || starting || awayFromStart} onPress={() => void start()} style={styles.start}>
               {starting ? 'Starting…' : 'Start navigation'}
             </PrimaryButton>
           </>
@@ -104,6 +119,8 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   back: { position: 'absolute', left: 16 },
   sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: 16 },
+  modes: { paddingHorizontal: 16, marginBottom: 12 },
   cards: { gap: 12, paddingHorizontal: 16 },
+  note: { marginHorizontal: 16, marginTop: 12, lineHeight: 18 },
   start: { marginHorizontal: 16, marginTop: 12 },
 });

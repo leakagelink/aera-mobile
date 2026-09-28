@@ -1,4 +1,4 @@
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
 
 import { RedisService } from '../../cache/redis.service';
@@ -39,6 +39,33 @@ export class AdminAuthService {
     }
     const session = { id: admin.id, email: admin.email };
     await this.audit.insert({ adminId: admin.id, action: 'Admin login succeeded', provider: null, success: true, ipAddress });
+    return { token: signAdminToken(session, this.config.adminJwtSecret), session };
+  }
+
+  async updateAccount(adminId: string, currentPassword: string, email: string | undefined, newPassword: string | undefined, ipAddress: string | null) {
+    if (!this.config.adminJwtSecret) throw new UnauthorizedException('Admin authentication is not configured.');
+    const nextEmail = email?.trim().toLowerCase();
+    const nextPassword = newPassword?.trim();
+    if (!nextEmail && !nextPassword) throw new BadRequestException('Enter a new login email or a new password.');
+    const result = await this.database.query<{ id: string; email: string; password_hash: string }>(
+      'SELECT id, email, password_hash FROM admin_users WHERE id = $1',
+      [adminId],
+    );
+    const admin = result.rows[0];
+    if (!admin) throw new UnauthorizedException('Admin authentication is required.');
+    const matches = await bcrypt.compare(currentPassword, admin.password_hash).catch(() => false);
+    if (!matches) throw new UnauthorizedException('Current password is wrong.');
+    const emailChanged = Boolean(nextEmail && nextEmail !== admin.email);
+    if (emailChanged) {
+      const taken = await this.database.query('SELECT 1 FROM admin_users WHERE email = $1 AND id <> $2', [nextEmail, admin.id]);
+      if (taken.rows.length > 0) throw new ConflictException('That login email is already used.');
+    }
+    const passwordHash = nextPassword ? await bcrypt.hash(nextPassword, 12) : admin.password_hash;
+    const savedEmail = emailChanged && nextEmail ? nextEmail : admin.email;
+    await this.database.query('UPDATE admin_users SET email = $2, password_hash = $3 WHERE id = $1', [admin.id, savedEmail, passwordHash]);
+    if (emailChanged) await this.audit.insert({ adminId: admin.id, action: 'Admin login email updated', provider: null, success: true, ipAddress });
+    if (nextPassword) await this.audit.insert({ adminId: admin.id, action: 'Admin password updated', provider: null, success: true, ipAddress });
+    const session = { id: admin.id, email: savedEmail };
     return { token: signAdminToken(session, this.config.adminJwtSecret), session };
   }
 }

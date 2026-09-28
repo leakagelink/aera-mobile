@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Linking, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import { AppText } from '@/components/ui/AppText';
 import { PrimaryButton } from '@/components/ui/Buttons';
-import { signInToArah } from '@/services/auth/account';
+import { arahPolicyUrls, signInToArah } from '@/services/auth/account';
+import { signInWithGoogle } from '@/services/auth/google';
+import { registerArahNotifications } from '@/services/notifications/register';
 import { font } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
 import { errorMessage } from '@/utils/errors';
@@ -26,6 +28,7 @@ export default function SignInScreen() {
     setError(null);
     try {
       await signInToArah(mode, email.trim(), password);
+      void registerArahNotifications().catch(() => undefined);
       router.replace('/');
     } catch (caught) {
       setError(errorMessage(caught, 'Sign-in failed. Try again.'));
@@ -70,12 +73,46 @@ export default function SignInScreen() {
         <PrimaryButton
           disabled={pending}
           onPress={() => {
+            void (async () => {
+              if (pending) return;
+              setPending(true);
+              setError(null);
+              try {
+                const signedIn = await signInWithGoogle();
+                if (!signedIn) return;
+                void registerArahNotifications().catch(() => undefined);
+                router.replace('/');
+              } catch (caught) {
+                setError(errorMessage(caught, 'Google sign-in failed. Try again.'));
+              } finally {
+                setPending(false);
+              }
+            })();
+          }}
+        >
+          Continue with Google
+        </PrimaryButton>
+        <PrimaryButton
+          disabled={pending}
+          onPress={() => {
             setMode(mode === 'login' ? 'register' : 'login');
             setError(null);
           }}
         >
           {mode === 'login' ? 'Need an account?' : 'Already have an account?'}
         </PrimaryButton>
+        <View style={styles.policies}>
+          <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(arahPolicyUrls.privacy)}>
+            <AppText size={13} color={theme.colors.mutedForeground}>
+              Privacy policy
+            </AppText>
+          </Pressable>
+          <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(arahPolicyUrls.terms)}>
+            <AppText size={13} color={theme.colors.mutedForeground}>
+              Terms of use
+            </AppText>
+          </Pressable>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -86,4 +123,5 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, gap: 16 },
   copy: { lineHeight: 22 },
   input: { minHeight: 48, borderWidth: 1, borderRadius: 16, paddingHorizontal: 16, fontSize: 15 },
+  policies: { flexDirection: 'row', gap: 16 },
 });

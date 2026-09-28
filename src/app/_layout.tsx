@@ -14,6 +14,8 @@ import * as SystemUI from 'expo-system-ui';
 import { useEffect } from 'react';
 
 import { AppProviders } from '@/providers/AppProviders';
+import { registerArahNotifications } from '@/services/notifications/register';
+import { useAccountStore } from '@/store/sessionAuthStore';
 import { usePrefersReducedMotion } from '@/theme/ReducedMotion';
 import { useTheme } from '@/theme/useTheme';
 
@@ -35,9 +37,20 @@ export default function RootLayout() {
 
   return (
     <AppProviders>
+      <NotificationRegistrar />
       <RootNavigator />
     </AppProviders>
   );
+}
+
+function NotificationRegistrar() {
+  const token = useAccountStore((state) => state.token);
+  const hydrated = useAccountStore((state) => state.hydrated);
+  useEffect(() => {
+    if (!hydrated || !token) return;
+    void registerArahNotifications().catch(() => undefined);
+  }, [hydrated, token]);
+  return null;
 }
 
 function RootNavigator() {

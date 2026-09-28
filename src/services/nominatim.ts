@@ -5,7 +5,7 @@ import { requestJson } from '@/services/http';
 import type { Coordinate } from '@/types/location';
 import type { Place } from '@/types/place';
 import { AppError } from '@/utils/errors';
-import { isValidCoordinate } from '@/utils/geo';
+import { distanceMeters, isValidCoordinate } from '@/utils/geo';
 
 const MIN_INTERVAL_MS = 1100;
 const CACHE_TTL_MS = 60_000;
@@ -121,4 +121,109 @@ export async function reverseGeocode(coordinate: Coordinate, signal?: AbortSigna
   const place = toPlace(parsed.data);
   cache.set(key, { at: Date.now(), places: place ? [place] : [] });
   return place;
+}
+
+const NEARBY_RADIUS_M = 1_200;
+const NEARBY_MOVE_M = 400;
+const NEARBY_CACHE_TTL_MS = 5 * 60 * 1000;
+const NEARBY_CATEGORIES = ['restaurant', 'cafe', 'park', 'hospital'] as const;
+
+let lastNearby: { at: number; ttl: number; coordinate: Coordinate; places: Place[] } | null = null;
+
+export async function nearbyPlaces(coordinate: Coordinate, signal?: AbortSignal): Promise<Place[]> {
+  if (!isValidCoordinate(coordinate.latitude, coordinate.longitude)) return [];
+  if (
+    lastNearby &&
+    Date.now() - lastNearby.at < lastNearby.ttl &&
+    distanceMeters(lastNearby.coordinate, coordinate) < NEARBY_MOVE_M
+  ) {
+    return lastNearby.places;
+  }
+
+  const seen = new Set<string>();
+  const collected: Place[] = [];
+  for (const category of NEARBY_CATEGORIES) {
+    if (signal?.aborted) return collected;
+    const batch = await searchNearbyCategory(category, coordinate, signal, NEARBY_RADIUS_M, 3);
+    for (const place of batch) {
+      const distance = distanceMeters(coordinate, place);
+      if (distance < 30 || distance > NEARBY_RADIUS_M) continue;
+      const identity = `${place.name.toLowerCase()}:${place.latitude.toFixed(4)}:${place.longitude.toFixed(4)}`;
+      if (seen.has(identity)) continue;
+      seen.add(identity);
+      collected.push(place);
+    }
+  }
+  if (signal?.aborted) return collected;
+
+  const places = collected.sort((a, b) => distanceMeters(coordinate, a) - distanceMeters(coordinate, b)).slice(0, 8);
+  lastNearby = { at: Date.now(), ttl: places.length > 0 ? NEARBY_CACHE_TTL_MS : CACHE_TTL_MS, coordinate, places };
+  return places;
+}
+
+const categoryCache = new Map<string, { at: number; ttl: number; places: Place[] }>();
+
+export async function nearbyCategoryPlaces(
+  coordinate: Coordinate,
+  category: string,
+  radiusMeters: number,
+  signal?: AbortSignal,
+): Promise<Place[]> {
+  if (!isValidCoordinate(coordinate.latitude, coordinate.longitude)) return [];
+  const key = `${category}:${radiusMeters}:${coordinate.latitude.toFixed(3)},${coordinate.longitude.toFixed(3)}`;
+  const cached = categoryCache.get(key);
+  if (cached && Date.now() - cached.at < cached.ttl) return cached.places;
+
+  const batch = await searchNearbyCategory(category, coordinate, signal, radiusMeters, 8);
+  if (signal?.aborted) return [];
+  const places = batch
+    .filter((place) => distanceMeters(coordinate, place) <= radiusMeters && matchesCategory(category, place))
+    .sort((a, b) => distanceMeters(coordinate, a) - distanceMeters(coordinate, b))
+    .slice(0, 8);
+  categoryCache.set(key, { at: Date.now(), ttl: places.length > 0 ? NEARBY_CACHE_TTL_MS : CACHE_TTL_MS, places });
+  return places;
+}
+
+function matchesCategory(category: string, place: Place): boolean {
+  if (category === 'airport') return place.category === 'aerodrome' || place.category === 'airport' || /airport/i.test(place.name);
+  if (category === '[railway=station]') return place.category === 'station';
+  return true;
+}
+
+async function searchNearbyCategory(
+  category: string,
+  coordinate: Coordinate,
+  signal: AbortSignal | undefined,
+  radiusMeters: number,
+  limit: number,
+): Promise<Place[]> {
+  const url = new URL('/search', env.geocodingBaseUrl);
+  url.searchParams.set('q', category);
+  url.searchParams.set('format', 'jsonv2');
+  url.searchParams.set('limit', String(limit));
+  url.searchParams.set('viewbox', nearbyViewbox(coordinate, radiusMeters));
+  url.searchParams.set('bounded', '1');
+
+  try {
+    const payload = await schedule(() => requestJson(url.toString(), { headers: headers(), signal }));
+    const parsed = searchSchema.safeParse(payload);
+    if (!parsed.success) return [];
+    return parsed.data.flatMap((row) => {
+      const place = toPlace(row);
+      return place && place.name.length > 1 ? [place] : [];
+    });
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    return [];
+  }
+}
+
+function nearbyViewbox(coordinate: Coordinate, radiusMeters: number): string {
+  const latitudeDelta = radiusMeters / 111_320;
+  const longitudeDelta = radiusMeters / (111_320 * Math.max(0.2, Math.cos((coordinate.latitude * Math.PI) / 180)));
+  const left = coordinate.longitude - longitudeDelta;
+  const right = coordinate.longitude + longitudeDelta;
+  const top = coordinate.latitude + latitudeDelta;
+  const bottom = coordinate.latitude - latitudeDelta;
+  return `${left},${top},${right},${bottom}`;
 }

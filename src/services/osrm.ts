@@ -5,6 +5,7 @@ import { env } from '@/services/env';
 import { requestJson } from '@/services/http';
 import type { Coordinate } from '@/types/location';
 import type { MatchedTrace, NearestRoad, RouteAlternative, RouteStep } from '@/types/route';
+import { travelModeLabel, type OsrmProfile, type TravelMode } from '@/types/travel';
 import { AppError } from '@/utils/errors';
 import { isValidCoordinate } from '@/utils/geo';
 
@@ -46,9 +47,11 @@ const responseSchema = z.object({
   routes: z.array(routeSchema).optional(),
 });
 
-export async function fetchDrivingRoutes(
+export async function fetchRoutes(
   origin: Coordinate,
   destination: Coordinate,
+  profile: OsrmProfile,
+  mode: TravelMode,
   signal?: AbortSignal,
 ): Promise<RouteAlternative[]> {
   if (!isValidCoordinate(origin.latitude, origin.longitude) || !isValidCoordinate(destination.latitude, destination.longitude)) {
@@ -56,7 +59,7 @@ export async function fetchDrivingRoutes(
   }
 
   const path = `${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}`;
-  const url = new URL(`/route/v1/driving/${path}`, env.routingBaseUrl);
+  const url = new URL(`/route/v1/${profile}/${path}`, env.routingBaseUrl);
   url.searchParams.set('overview', 'full');
   url.searchParams.set('geometries', 'geojson');
   url.searchParams.set('steps', 'true');
@@ -76,16 +79,16 @@ export async function fetchDrivingRoutes(
     const unavailable = parsed.data.code === 'NoRoute' || parsed.data.code === 'NoSegment';
     throw new AppError(
       unavailable
-        ? 'No driving route is available between these places.'
+        ? `No ${travelModeLabel(mode).toLowerCase()} route is available between these places.`
         : parsed.data.message || 'Routing failed. Try again.',
       'osrm',
     );
   }
 
-  return parsed.data.routes.map((route, index) => toRoute(route, index));
+  return parsed.data.routes.map((route, index) => toRoute(route, index, mode));
 }
 
-function toRoute(route: z.infer<typeof routeSchema>, index: number): RouteAlternative {
+function toRoute(route: z.infer<typeof routeSchema>, index: number, mode: TravelMode): RouteAlternative {
   const steps = route.legs.flatMap((leg) => (leg.steps ?? []).map(toStep));
   const summary = route.legs.map((leg) => leg.summary?.trim()).filter((value): value is string => Boolean(value)).join(' · ');
   const geometry = route.geometry.coordinates.flatMap(([longitude, latitude]) =>
@@ -97,12 +100,12 @@ function toRoute(route: z.infer<typeof routeSchema>, index: number): RouteAltern
   const distances = route.legs.flatMap((leg) => leg.annotation?.distance ?? []);
   const durations = route.legs.flatMap((leg) => leg.annotation?.duration ?? []);
   return {
-    id: `osrm-${index}`,
+    id: `osrm-${mode}-${index}`,
     provider: 'osrm',
     label: index === 0 ? 'Recommended' : `Alternative ${index}`,
     distanceMeters: route.distance,
     durationSeconds: route.duration,
-    summary: summary || steps.find((step) => step.name)?.name || 'Driving route',
+    summary: summary || steps.find((step) => step.name)?.name || `${travelModeLabel(mode)} route`,
     geometry,
     steps,
     annotations:

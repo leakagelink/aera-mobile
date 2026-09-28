@@ -3,6 +3,7 @@ import { BadRequestException, Inject, Injectable, NotFoundException, ServiceUnav
 import { APP_CONFIG } from '../../config/config.module';
 import type { AppConfig } from '../../config/load-config';
 import { catalogEntry, providerStatus, type ProviderHealthStatus, type ProviderSlug, type ProviderType } from '../../providers/catalog';
+import { currentGeminiModel } from '../../providers/gemini-model';
 import { SecretEncryptionService } from '../../security/secret-encryption.service';
 import { stripSecretFields } from '../../security/sanitize';
 import { ProviderConfigRepository, type ProviderRow } from './provider-config.repository';
@@ -248,11 +249,11 @@ export class ProviderConfigService {
         timeoutMs: row.timeout_ms,
         enabled,
         source: 'database',
-        model: row.model?.trim() || model || 'gemini-2.0-flash',
+        model: resolvedModel(slug, row.model, model),
       };
     }
     if (!envKey) return null;
-    return { provider: slug, providerType: type, baseUrl: fallbackUrl, apiKey: envKey, timeoutMs: 10_000, enabled: true, source: 'environment', model: model || 'gemini-2.0-flash' };
+    return { provider: slug, providerType: type, baseUrl: fallbackUrl, apiKey: envKey, timeoutMs: 10_000, enabled: true, source: 'environment', model: resolvedModel(slug, null, model) };
   }
 
   private decryptOrEnv(row: ProviderRow, provider: string): string | null {
@@ -326,6 +327,11 @@ function resolveKeyUpdate(
   if (trimmed.length < 8) throw new BadRequestException('API key is too short.');
   if (!key) throw new ServiceUnavailableException('Server encryption is not configured.');
   return { encrypted: encryption.encrypt(trimmed, key), last4: trimmed.slice(-4), replaced: true };
+}
+
+function resolvedModel(slug: ProviderSlug, stored: string | null | undefined, fallback: string | null): string {
+  const configured = stored?.trim() || fallback;
+  return slug === 'gemini' ? currentGeminiModel(configured) : configured || '';
 }
 
 function trimBase(value: string): string {

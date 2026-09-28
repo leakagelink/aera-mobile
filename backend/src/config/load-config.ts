@@ -1,3 +1,4 @@
+import { currentGeminiModel } from '../providers/gemini-model';
 import { DEV_USER_ID } from './constants';
 
 export type AppConfig = {
@@ -75,7 +76,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
     openWeatherApiKey: readSecret(env.OPENWEATHER_API_KEY),
     openWeatherBaseUrl: trimSlash(readUrl(env.OPENWEATHER_BASE_URL, 'https://api.openweathermap.org', 'OPENWEATHER_BASE_URL')),
     geminiApiKey: readSecret(env.GEMINI_API_KEY),
-    geminiModel: env.GEMINI_MODEL?.trim() || 'gemini-2.0-flash',
+    geminiModel: currentGeminiModel(env.GEMINI_MODEL),
     aiMaxToolRounds: readRangeInt(env.AI_MAX_TOOL_ROUNDS, 5, 1, 8, 'AI_MAX_TOOL_ROUNDS'),
     aiMaxMessageChars: readRangeInt(env.AI_MAX_MESSAGE_CHARS, 2000, 100, 8000, 'AI_MAX_MESSAGE_CHARS'),
     aiMaxContextMessages: readRangeInt(env.AI_MAX_CONTEXT_MESSAGES, 8, 0, 20, 'AI_MAX_CONTEXT_MESSAGES'),

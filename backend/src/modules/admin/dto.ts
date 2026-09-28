@@ -96,6 +96,27 @@ export class UpdateProviderDto {
   configJson?: Record<string, unknown>;
 }
 
+export class UpdateGoogleIntegrationDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  webClientId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  androidClientId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20_000)
+  serviceAccountJson?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  clearServiceAccount?: boolean;
+}
+
 export class AuditQueryDto {
   @IsOptional()
   @Type(() => Number)

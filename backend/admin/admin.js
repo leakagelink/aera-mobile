@@ -68,6 +68,7 @@ async function render(view, selectedProvider) {
   if (view === 'providers') return renderProviders(selectedProvider);
   if (view === 'health') return renderHealth();
   if (view === 'audit') return renderAudit();
+  if (view === 'google') return renderGoogle();
   return renderSettings();
 }
 
@@ -237,8 +238,99 @@ async function renderAudit() {
   main.append(section);
 }
 
+async function renderGoogle() {
+  const current = await api('/api/v1/admin/google');
+  const section = document.createElement('section');
+  section.className = 'card';
+  const title = document.createElement('h1');
+  title.textContent = 'Google sign-in and notifications';
+  const copy = document.createElement('p');
+  copy.className = 'status';
+  copy.textContent = 'Save the web client ID, the Android client ID, and the Firebase service account JSON. The JSON is encrypted on the server and is not shown again. Do not paste it into chat or GitHub.';
+  const form = document.createElement('form');
+  form.append(field('Web client ID', 'web', current.webClientId || '', '123456-abc.apps.googleusercontent.com'));
+  form.append(field('Android client ID', 'android', current.androidClientId || '', '123456-abc.apps.googleusercontent.com'));
+  const fileLabel = document.createElement('label');
+  fileLabel.textContent = 'Firebase service account JSON';
+  const file = document.createElement('input');
+  file.type = 'file';
+  file.accept = 'application/json,.json';
+  fileLabel.append(file);
+  form.append(fileLabel);
+  const status = document.createElement('p');
+  status.className = 'status';
+  status.textContent = current.serviceAccountConfigured
+    ? `Service account saved for ${current.projectId || 'a project'} as ${current.clientEmail || 'a service account'}.`
+    : 'No service account uploaded.';
+  const result = document.createElement('p');
+  result.className = 'status';
+  result.setAttribute('role', 'status');
+  const row = document.createElement('div');
+  row.className = 'row';
+  const save = document.createElement('button');
+  save.type = 'submit';
+  save.textContent = 'Save';
+  const test = document.createElement('button');
+  test.type = 'button';
+  test.className = 'ghost';
+  test.textContent = 'Test service account';
+  test.disabled = !current.serviceAccountConfigured;
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'ghost';
+  remove.textContent = 'Remove service account';
+  remove.disabled = !current.serviceAccountConfigured;
+  row.append(save, test, remove);
+  form.append(status, row, result);
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    result.textContent = 'Saving…';
+    const payload = { webClientId: form.querySelector('[name="web"]').value, androidClientId: form.querySelector('[name="android"]').value };
+    if (file.files?.[0]) payload.serviceAccountJson = await file.files[0].text();
+    try {
+      await api('/api/v1/admin/google', { method: 'PATCH', body: JSON.stringify(payload) });
+      file.value = '';
+      await render('google');
+    } catch (error) {
+      result.textContent = error instanceof Error ? error.message : 'Save failed.';
+    }
+  });
+  test.addEventListener('click', async () => {
+    result.textContent = 'Testing…';
+    try {
+      const report = await api('/api/v1/admin/google/test', { method: 'POST' });
+      result.textContent = report.message;
+    } catch (error) {
+      result.textContent = error instanceof Error ? error.message : 'Test failed.';
+    }
+  });
+  remove.addEventListener('click', async () => {
+    result.textContent = 'Removing…';
+    try {
+      await api('/api/v1/admin/google', { method: 'PATCH', body: JSON.stringify({ clearServiceAccount: true }) });
+      await render('google');
+    } catch (error) {
+      result.textContent = error instanceof Error ? error.message : 'Remove failed.';
+    }
+  });
+  section.append(title, copy, form);
+  main.append(section);
+}
+
+function field(label, name, value, placeholder) {
+  const wrap = document.createElement('label');
+  wrap.append(document.createTextNode(label));
+  const input = document.createElement('input');
+  input.name = name;
+  input.value = value;
+  input.placeholder = placeholder;
+  input.autocomplete = 'off';
+  wrap.append(input);
+  return wrap;
+}
+
 async function renderSettings() {
-  const settings = await api('/api/v1/admin/settings');
+  const [settings, me] = await Promise.all([api('/api/v1/admin/settings'), api('/api/v1/admin/auth/me')]);
   const section = document.createElement('section');
   section.className = 'card';
   section.innerHTML = `<h1>Settings</h1>
@@ -249,6 +341,69 @@ async function renderSettings() {
     <p>TomTom environment fallback: ${settings.tomtomEnvConfigured ? 'set' : 'not set'}</p>
     <p>Weather cache TTL: ${settings.weatherCacheTtlSeconds} seconds</p>`;
   main.append(section);
+
+  const account = document.createElement('section');
+  account.className = 'card';
+  account.style.marginTop = '16px';
+  const heading = document.createElement('h2');
+  heading.textContent = 'Admin login';
+  const copy = document.createElement('p');
+  copy.className = 'status';
+  copy.textContent = 'This changes the admin panel login only. Phone app accounts stay separate.';
+  const form = document.createElement('form');
+  const email = document.createElement('input');
+  email.name = 'email';
+  email.type = 'email';
+  email.required = true;
+  email.value = me.email || '';
+  email.autocomplete = 'username';
+  form.append(labeled('Login email', email));
+  const nextPassword = document.createElement('input');
+  nextPassword.name = 'newPassword';
+  nextPassword.type = 'password';
+  nextPassword.minLength = 8;
+  nextPassword.autocomplete = 'new-password';
+  nextPassword.placeholder = 'Leave blank to keep the current password';
+  form.append(labeled('New password', nextPassword));
+  const currentPassword = document.createElement('input');
+  currentPassword.name = 'currentPassword';
+  currentPassword.type = 'password';
+  currentPassword.required = true;
+  currentPassword.minLength = 8;
+  currentPassword.autocomplete = 'current-password';
+  form.append(labeled('Current password', currentPassword));
+  const result = document.createElement('p');
+  result.className = 'status';
+  result.setAttribute('role', 'status');
+  const save = document.createElement('button');
+  save.type = 'submit';
+  save.textContent = 'Save login';
+  form.append(save, result);
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    result.textContent = 'Saving…';
+    try {
+      const payload = { email: email.value, currentPassword: currentPassword.value };
+      if (nextPassword.value) payload.newPassword = nextPassword.value;
+      await api('/api/v1/admin/auth/me', {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      });
+      currentPassword.value = '';
+      nextPassword.value = '';
+      result.textContent = 'Admin login updated.';
+    } catch (error) {
+      result.textContent = error instanceof Error ? error.message : 'The login was not updated.';
+    }
+  });
+  account.append(heading, copy, form);
+  main.append(account);
+}
+
+function labeled(label, input) {
+  const wrap = document.createElement('label');
+  wrap.append(document.createTextNode(label), input);
+  return wrap;
 }
 
 api('/api/v1/admin/auth/me').then(() => {

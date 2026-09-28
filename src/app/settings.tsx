@@ -3,6 +3,8 @@ import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { registerArahNotifications } from '@/services/notifications/register';
+import { useAccountStore } from '@/store/sessionAuthStore';
 import { usePreferencesStore } from '@/store/preferencesStore';
 import { useTripStore } from '@/store/tripStore';
 import type { ThemePreference } from '@/theme';
@@ -29,6 +31,7 @@ export default function SettingsScreen() {
   const setTheme = usePreferencesStore((state) => state.setTheme);
   const setUnits = usePreferencesStore((state) => state.setUnits);
   const clearHistory = useTripStore((state) => state.clearHistory);
+  const signedIn = useAccountStore((state) => state.token);
 
   function confirmClear() {
     Alert.alert('Delete trip history?', 'This removes journeys stored on this device. It cannot be undone.', [
@@ -52,6 +55,17 @@ export default function SettingsScreen() {
         <AppText size={11} weight="bold" color={theme.colors.mutedForeground} style={styles.label}>
           Privacy
         </AppText>
+        {signedIn ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void registerArahNotifications().catch(() => undefined)}
+            style={[styles.link, { backgroundColor: theme.colors.surface }]}
+          >
+            <AppText size={15} weight="medium">
+              Turn on notifications
+            </AppText>
+          </Pressable>
+        ) : null}
         <Pressable accessibilityRole="button" onPress={() => router.push('/privacy')} style={[styles.link, { backgroundColor: theme.colors.surface }]}>
           <AppText size={15} weight="medium">
             Privacy and location

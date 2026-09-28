@@ -2,6 +2,7 @@ import type { Coordinate } from '@/types/location';
 import type { Place } from '@/types/place';
 import type { MatchedTrace, NearestRoad, RouteAlternative } from '@/types/route';
 import type { TrafficReport } from '@/types/traffic';
+import type { TravelMode } from '@/types/travel';
 
 export interface MapStyleProvider {
   readonly id: 'maplibre';
@@ -20,7 +21,7 @@ export interface GeocodingProvider {
 
 export interface RoutingProvider {
   readonly id: string;
-  calculateRoute(origin: Coordinate, destination: Coordinate, signal?: AbortSignal): Promise<RouteAlternative[]>;
+  calculateRoute(origin: Coordinate, destination: Coordinate, signal?: AbortSignal, mode?: TravelMode): Promise<RouteAlternative[]>;
   nearestRoad(coordinate: Coordinate, signal?: AbortSignal): Promise<NearestRoad | null>;
   matchTrace(trace: Coordinate[], signal?: AbortSignal): Promise<MatchedTrace | null>;
 }

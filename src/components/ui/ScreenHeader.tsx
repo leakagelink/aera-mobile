@@ -5,31 +5,34 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/AppText';
 import { radius } from '@/theme';
+import { useResponsive } from '@/theme/useResponsive';
 import { useTheme } from '@/theme/useTheme';
 
 type Props = {
   title: string;
   subtitle?: string;
+  titleLines?: number;
   onBack?: () => void;
   right?: ReactNode;
 };
 
-export function ScreenHeader({ title, subtitle, onBack, right }: Props) {
+export function ScreenHeader({ title, subtitle, titleLines = 1, onBack, right }: Props) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { gutter } = useResponsive();
   return (
-    <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+    <View style={[styles.header, { paddingTop: insets.top + 8, paddingHorizontal: gutter }]}>
       {onBack ? (
         <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={onBack} style={[styles.back, { backgroundColor: theme.colors.secondary }]}>
           <ArrowLeft color={theme.colors.foreground} size={20} />
         </Pressable>
       ) : null}
       <View style={styles.copy}>
-        <AppText size={18} weight="semibold" numberOfLines={1}>
+        <AppText size={18} weight="semibold" numberOfLines={titleLines}>
           {title}
         </AppText>
         {subtitle ? (
-          <AppText size={12} color={theme.colors.mutedForeground} numberOfLines={1}>
+          <AppText size={12} color={theme.colors.mutedForeground} numberOfLines={2}>
             {subtitle}
           </AppText>
         ) : null}
@@ -45,7 +48,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingHorizontal: 20,
     paddingBottom: 12,
   },
   back: {
@@ -55,5 +57,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  copy: { flex: 1 },
+  copy: { flex: 1, minWidth: 0 },
 });

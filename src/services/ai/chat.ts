@@ -16,6 +16,7 @@ export type AiChatResult = {
 export async function sendAiChat(message: string, history: AiChatTurn[]): Promise<AiChatResult> {
   const payload = await aeraApiRequest('/api/v1/ai/chat', {
     method: 'POST',
+    timeoutMs: 45_000,
     body: {
       message,
       history: history.slice(-8).map((turn) => ({ role: turn.role, text: turn.text.slice(0, 500) })),

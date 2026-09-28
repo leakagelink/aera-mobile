@@ -19,7 +19,8 @@ import { distanceMeters } from '@/utils/geo';
 
 export default function SearchScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ q?: string }>();
+  const params = useLocalSearchParams<{ q?: string; field?: string }>();
+  const field = (Array.isArray(params.field) ? params.field[0] : params.field) === 'origin' ? 'origin' : 'destination';
   const initial = typeof params.q === 'string' ? params.q : '';
   const [query, setQuery] = useState(initial);
   const search = usePlaceSearch(query);
@@ -30,19 +31,44 @@ export default function SearchScreen() {
 
   async function select(place: Place) {
     await remember(place);
+    if (field === 'origin') {
+      useSessionStore.getState().setOrigin(place);
+      router.back();
+      return;
+    }
     useSessionStore.getState().setDestination(place);
     router.push('/destination');
+  }
+
+  function chooseCurrentLocation() {
+    useSessionStore.getState().setOrigin(null);
+    router.back();
   }
 
   const showResults = query.trim().length >= 2;
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
-      <ScreenHeader title="Search" onBack={() => router.back()} />
+      <ScreenHeader title={field === 'origin' ? 'From' : 'Where to'} onBack={() => router.back()} />
       <View style={styles.search}>
-        <SearchBar value={query} onChangeText={setQuery} placeholder="Search a place" autoFocus />
+        <SearchBar value={query} onChangeText={setQuery} placeholder={field === 'origin' ? 'Search a start place' : 'Search a destination'} autoFocus />
       </View>
       <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
+        {field === 'origin' ? (
+          <Pressable accessibilityRole="button" onPress={chooseCurrentLocation} style={[styles.row, { borderBottomColor: theme.colors.border }]}>
+            <View style={[styles.icon, { backgroundColor: theme.colors.secondary }]}>
+              <MapPin color={theme.colors.primary} size={18} />
+            </View>
+            <View style={styles.copy}>
+              <AppText size={15} weight="semibold">
+                Your location
+              </AppText>
+              <AppText size={12} color={theme.colors.mutedForeground} numberOfLines={1}>
+                Start from where you are now
+              </AppText>
+            </View>
+          </Pressable>
+        ) : null}
         {!showResults ? (
           <Section title="Recent">
             {recent.length === 0 ? (

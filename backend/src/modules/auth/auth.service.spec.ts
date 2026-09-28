@@ -33,6 +33,39 @@ describe('AuthService', () => {
     await expect(service(query).login('ada@example.com', 'wrong-password-value', null)).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
+  it('creates a session from a verified Google account', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        aud: '123-web.apps.googleusercontent.com',
+        email: 'ada@example.com',
+        email_verified: 'true',
+        sub: 'google-sub',
+        name: 'Ada',
+      }),
+    } as Response);
+    const query = jest.fn(async (sql: string) => {
+      if (String(sql).includes('web_client_id')) return { rows: [{ web_client_id: '123-web.apps.googleusercontent.com' }] };
+      return { rows: [] };
+    });
+    await expect(service(query).loginWithGoogle('google-id-token-value-long-enough', null)).resolves.toMatchObject({
+      user: { email: 'ada@example.com' },
+    });
+    expect(query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO users'), expect.any(Array));
+    fetchMock.mockRestore();
+  });
+
+  it('deletes an account only after the password matches', async () => {
+    const hash = await bcrypt.hash('long-password', 4);
+    const query = jest.fn(async (sql: string) => {
+      if (String(sql).includes('SELECT')) return { rows: [{ id: 'user-1', email: 'ada@example.com', password_hash: hash }] };
+      return { rows: [], rowCount: 1 };
+    });
+    await expect(service(query).deleteAccount('ada@example.com', 'long-password', null)).resolves.toEqual({ deleted: true });
+    expect(query).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM users'), ['user-1']);
+    await expect(service(query).deleteAccount('ada@example.com', 'wrong-password-value', null)).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
   it('rejects a duplicate email and a missing configuration', async () => {
     const query = jest.fn(async () => {
       const error = new Error('duplicate') as Error & { code: string };

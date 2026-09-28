@@ -7,10 +7,11 @@ import { AdminBootstrapService } from './admin-bootstrap.service';
 import { AdminGuard } from './admin.guard';
 import { AdminProviderService } from './admin-provider.service';
 import { AuditRepository } from './audit.repository';
+import { GoogleIntegrationService } from './google-integration.service';
 
 @Module({
   controllers: [AdminAuthController, AdminApiController],
-  providers: [AdminAuthService, AdminBootstrapService, AdminGuard, AdminProviderService, AuditRepository],
-  exports: [AdminGuard],
+  providers: [AdminAuthService, AdminBootstrapService, AdminGuard, AdminProviderService, AuditRepository, GoogleIntegrationService],
+  exports: [AdminGuard, GoogleIntegrationService],
 })
 export class AdminModule {}
