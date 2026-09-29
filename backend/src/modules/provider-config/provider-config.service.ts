@@ -161,7 +161,7 @@ export class ProviderConfigService {
   }
 
   activeRelay(): Promise<(ResolvedProvider & { model: string }) | null> {
-    return this.configuredBySlug('relay', null, 'https://api.relaymodels.com/v1', 'qwen3.7-plus');
+    return this.configuredBySlug('relay', null, 'https://api.relaymodels.com/v1', 'deepseek-v4-flash');
   }
 
   activeTomTom(): Promise<ResolvedProvider | null> {

@@ -13,9 +13,10 @@ const input = {
 
 describe('currentGeminiModel', () => {
   it('replaces the shut-down Gemini 2.0 models', () => {
-    expect(currentGeminiModel('gemini-2.0-flash')).toBe('gemini-2.5-flash-lite');
-    expect(currentGeminiModel('gemini-3.6-flash')).toBe('gemini-2.5-flash-lite');
-    expect(currentGeminiModel('  ')).toBe('gemini-2.5-flash-lite');
+    expect(currentGeminiModel('gemini-2.0-flash')).toBe('gemini-3.5-flash-lite');
+    expect(currentGeminiModel('gemini-2.5-flash-lite')).toBe('gemini-3.5-flash-lite');
+    expect(currentGeminiModel('gemini-3.6-flash')).toBe('gemini-3.5-flash-lite');
+    expect(currentGeminiModel('  ')).toBe('gemini-3.5-flash-lite');
     expect(currentGeminiModel('gemini-3.8-flash')).toBe('gemini-3.8-flash');
   });
 });

@@ -12,8 +12,9 @@ const input = {
 
 describe('currentRelayModel', () => {
   it('replaces the expensive default with the cheap tool-calling model', () => {
-    expect(currentRelayModel('gpt-5-mini')).toBe('qwen3.7-plus');
-    expect(currentRelayModel('  ')).toBe('qwen3.7-plus');
+    expect(currentRelayModel('gpt-5-mini')).toBe('deepseek-v4-flash');
+    expect(currentRelayModel('qwen3.7-plus')).toBe('deepseek-v4-flash');
+    expect(currentRelayModel('  ')).toBe('deepseek-v4-flash');
     expect(currentRelayModel('gpt-5.6-luna')).toBe('gpt-5.6-luna');
   });
 });
@@ -42,7 +43,7 @@ describe('RelayProvider', () => {
     expect(seenBody).not.toContain('relay-test-key');
     expect(seenKey).toBe('relay-test-key');
     const body = JSON.parse(seenBody) as { model: string; max_tokens: number };
-    expect(body.model).toBe('qwen3.7-plus');
+    expect(body.model).toBe('deepseek-v4-flash');
     expect(body.max_tokens).toBe(400);
   });
 

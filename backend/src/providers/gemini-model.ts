@@ -1,10 +1,11 @@
-export const CURRENT_GEMINI_MODEL = 'gemini-2.5-flash-lite';
+export const CURRENT_GEMINI_MODEL = 'gemini-3.5-flash-lite';
 
 const RETIRED_GEMINI_MODELS = new Set([
   'gemini-2.0-flash',
   'gemini-2.0-flash-001',
   'gemini-2.0-flash-lite',
   'gemini-2.0-flash-lite-001',
+  'gemini-2.5-flash-lite',
   'gemini-3.6-flash',
 ]);
 

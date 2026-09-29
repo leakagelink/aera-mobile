@@ -3,9 +3,9 @@ import { aiError, type GeminiContent, type GeminiFunctionCall, type GeminiToolDe
 
 export type RelayFetch = (url: string, init: { body: string; timeoutMs: number; apiKey: string }) => Promise<{ status: number; body: unknown }>;
 
-export const RELAY_MODEL = 'qwen3.7-plus';
+export const RELAY_MODEL = 'deepseek-v4-flash';
 
-const REPLACED_RELAY_MODELS = new Set(['gpt-5-mini']);
+const REPLACED_RELAY_MODELS = new Set(['gpt-5-mini', 'qwen3.7-plus']);
 
 export function currentRelayModel(configured: string | null | undefined): string {
   const model = configured?.trim();

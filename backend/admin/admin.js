@@ -161,8 +161,8 @@ function providerForm(entry, saved) {
   `;
   form.elements.baseUrl.value = saved?.baseUrl || entry.defaultBaseUrl;
   form.elements.timeoutMs.value = saved?.timeoutMs || 10000;
-  form.elements.model.value = saved?.model || (entry.provider === 'relay' ? 'qwen3.7-plus' : entry.provider === 'gemini' ? 'gemini-2.5-flash-lite' : '');
-  form.elements.model.placeholder = entry.provider === 'relay' ? 'qwen3.7-plus' : entry.provider === 'gemini' ? 'gemini-2.5-flash-lite' : '';
+  form.elements.model.value = saved?.model || (entry.provider === 'relay' ? 'deepseek-v4-flash' : entry.provider === 'gemini' ? 'gemini-3.5-flash-lite' : '');
+  form.elements.model.placeholder = entry.provider === 'relay' ? 'deepseek-v4-flash' : entry.provider === 'gemini' ? 'gemini-3.5-flash-lite' : '';
   form.elements.enabled.value = String(Boolean(saved?.enabled));
   form.elements.isDefault.value = String(Boolean(saved?.isDefault));
   form.querySelector('[data-key]').textContent = saved?.apiKeyConfigured ? `Current key ••••••••${saved.apiKeyLast4 || ''}` : 'No API key stored.';
