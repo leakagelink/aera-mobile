@@ -17,13 +17,13 @@
     </header>
     <main>
       <h1>Privacy policy</h1>
-      <p>Effective 28 September 2026. This policy describes the Arah mobile app and the service at arahmap.online.</p>
+      <p>Effective 29 September 2026. This policy describes the Arah mobile app and the service at arahmap.online.</p>
       <h2>Who we are</h2>
       <p>Arah is published under the package name com.arahmap.socilet. This policy covers the Arah app and the Arah account service.</p>
       <h2>Account</h2>
       <p>If you create an account, Arah stores your email address, a display name, and the time the account was created. A password account also stores a password hash. The password itself is not stored. If you continue with Google, Arah receives your Google account email, name, and Google account id, and stores them with the Arah account.</p>
       <h2>Notifications</h2>
-      <p>If you allow notifications, Arah stores this phone's notification token so the server can send a message to this device. You can turn notifications off in the phone's system settings. Deleting the account removes the token.</p>
+      <p>If you allow notifications, Arah stores this phone's Firebase Cloud Messaging token so the server can send a message to this device. You can turn notifications off in the phone's system settings. Deleting the account removes the token.</p>
       <h2>Location</h2>
       <p>Arah uses location only while the app is open. It does not collect location in the background. Location is used to show where you are, find nearby places, calculate a route, and record a trip after you start navigation.</p>
       <p>Trip history, route choices, and recent places stay on your phone unless you delete them there. Arah does not upload that trip history to its server.</p>
@@ -31,7 +31,8 @@
       <ul>
         <li>Your email and password when you register, sign in, or delete the account.</li>
         <li>Your current coordinates when you ask for weather. The server asks OpenWeather and keeps a short cache of the weather result, not a location history tied to your account. The cache expires within about 10 minutes.</li>
-        <li>The message you type to the assistant, recent chat text, and, if location is on, your coordinates, speed, heading, destination, and route progress. This is sent so the assistant can answer. Arah does not store the chat. The request is processed by Google Gemini.</li>
+        <li>The message you type to the assistant, recent chat text, and, if location is on, your coordinates, speed, heading, destination, and route progress. This is sent so the assistant can answer. Arah does not store the chat. Google Gemini processes the request. If Gemini cannot answer, the same request is sent to Relay Models, which answers with the DeepSeek model deepseek-v4-flash.</li>
+        <li>If you ask about traffic and a traffic provider is available, the coordinates for that request are sent to TomTom. Arah does not keep a traffic history.</li>
       </ul>
       <h2>Services the phone contacts directly</h2>
       <ul>
@@ -44,7 +45,7 @@
       <h2>How long data is kept</h2>
       <p>The account is kept until you delete it. Sign-in rate limits expire after 15 minutes. Weather cache entries expire after about 10 minutes. Assistant requests are not kept as an account record. Data on your phone stays there until you delete it or uninstall the app.</p>
       <h2>Deletion</h2>
-      <p>You can delete the account in the Arah app under Profile, or on the <a href="/account-deletion">account deletion page</a>. Deletion removes the account and any trips, routes, or saved places stored for that account on the server. It also removes the trip history stored on the phone that performs the deletion. Copies already sent to OpenWeather, Nominatim, OSRM, or Gemini for a single request are not pulled back.</p>
+      <p>You can delete the account in the Arah app under Profile, or on the <a href="/account-deletion">account deletion page</a>. A password account is deleted with its email and password. An account created with Google is deleted on that page with Google, or in the app while you are signed in. Deletion removes the account and any trips, routes, saved places, or notification tokens stored for that account on the server. It also removes the trip history stored on the phone that performs the deletion from the app. Copies already sent to OpenWeather, Nominatim, OSRM, TomTom, Gemini, or Relay Models for a single request are not pulled back.</p>
       <h2>Changes</h2>
       <p>If this policy changes, the updated version will be posted on this page with a new effective date.</p>
     </main>

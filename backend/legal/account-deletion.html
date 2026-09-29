@@ -21,7 +21,11 @@
       <h2>In the app</h2>
       <p>Open Arah, go to Profile, and choose Delete account. Confirm the deletion. This signs you out and removes the trip history on that phone.</p>
       <h2>On this page</h2>
-      <p>Enter the email and password for the account. Deletion is immediate and cannot be undone.</p>
+      <p>Deletion is immediate and cannot be undone. Use Google if the account was created with Google. Use the email and password if the account has a password.</p>
+      <h3>Google account</h3>
+      <div id="google-button"></div>
+      <p id="google-result" role="status"></p>
+      <h3>Password account</h3>
       <form id="delete-form">
         <label>Email <input name="email" type="email" autocomplete="username" required /></label>
         <label>Password <input name="password" type="password" autocomplete="current-password" required minlength="10" /></label>
@@ -30,12 +34,12 @@
       </form>
       <h2>What is deleted</h2>
       <ul>
-        <li>The account email, password hash, and display name on the Arah server.</li>
+        <li>The account email, password hash, Google account id, display name, and notification token on the Arah server.</li>
         <li>Trips, routes, and saved places stored on the server for that account, if any exist.</li>
         <li>When you delete from the app, the trip history stored on that phone.</li>
       </ul>
       <h2>What is not deleted</h2>
-      <p>A single weather or assistant request already sent to OpenWeather, Nominatim, OSRM, or Gemini is not retrieved. Short weather cache entries expire on their own within about 10 minutes and are not tied to your account. Trip history on a phone that you do not use for the deletion stays on that phone until you delete it there or uninstall Arah.</p>
+      <p>A single weather, traffic, or assistant request already sent to OpenWeather, Nominatim, OSRM, TomTom, Gemini, or Relay Models is not retrieved. Short weather cache entries expire on their own within about 10 minutes and are not tied to your account. Trip history on a phone that you do not use for the deletion stays on that phone until you delete it there or uninstall Arah.</p>
     </main>
     <footer>Arah · <a href="/privacy">Privacy</a></footer>
     <script src="/legal/delete.js"></script>

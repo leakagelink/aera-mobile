@@ -21,13 +21,22 @@ async function bootstrap(): Promise<void> {
   const server = app.getHttpAdapter().getInstance();
   const legalDir = join(process.cwd(), 'legal');
   server.use('/legal', express.static(legalDir));
-  const sendLegal = (file: string) => (_request: Request, response: Response) => {
+  const sendLegal = (file: string, contentSecurityPolicy?: string) => (_request: Request, response: Response) => {
+    if (contentSecurityPolicy) response.setHeader('Content-Security-Policy', contentSecurityPolicy);
     response.sendFile(join(legalDir, file));
   };
+  const deletionPolicy = [
+    "default-src 'self'",
+    "script-src 'self' https://accounts.google.com",
+    "frame-src https://accounts.google.com",
+    "connect-src 'self' https://accounts.google.com",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: https://accounts.google.com",
+  ].join('; ');
   server.get('/', sendLegal('home.html'));
   server.get(['/privacy', '/privacy/'], sendLegal('privacy.html'));
   server.get(['/terms', '/terms/'], sendLegal('terms.html'));
-  server.get(['/account-deletion', '/account-deletion/'], sendLegal('account-deletion.html'));
+  server.get(['/account-deletion', '/account-deletion/'], sendLegal('account-deletion.html', deletionPolicy));
   app.use('/admin', express.static(join(process.cwd(), 'admin')));
   app.use(json({ limit: '1mb' }));
   app.use(urlencoded({ extended: false, limit: '1mb' }));

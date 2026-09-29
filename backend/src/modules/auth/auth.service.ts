@@ -1,4 +1,4 @@
-import { ConflictException, Inject, Injectable, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, NotFoundException, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
 import { randomUUID } from 'node:crypto';
 
@@ -46,6 +46,38 @@ export class AuthService {
     const matches = await bcrypt.compare(password, user?.password_hash || DUMMY_HASH).catch(() => false);
     if (!user?.email || !user.password_hash || !matches) throw new UnauthorizedException(GENERIC_LOGIN_ERROR);
     return this.session(user.id, user.email);
+  }
+
+  async publicWebClientId(): Promise<string | null> {
+    return this.webClientId();
+  }
+
+  async deleteWithGoogle(idToken: string, ipAddress: string | null) {
+    this.assertConfigured();
+    await this.limit(ipAddress);
+    const audience = await this.webClientId();
+    if (!audience) throw new ServiceUnavailableException('Google sign-in is not configured.');
+    const profile = await readGoogleIdToken(idToken, audience);
+    const linked = await this.database.query<{ id: string }>(
+      'SELECT id FROM users WHERE google_sub = $1 AND is_development = false',
+      [profile.sub],
+    );
+    let userId = linked.rows[0]?.id ?? null;
+    if (!userId) {
+      const byEmail = await this.database.query<{ id: string; google_sub: string | null }>(
+        'SELECT id, google_sub FROM users WHERE lower(email) = $1 AND is_development = false',
+        [profile.email],
+      );
+      const existing = byEmail.rows[0];
+      if (existing?.google_sub && existing.google_sub !== profile.sub) {
+        throw new ConflictException('That email is already linked to another Google account.');
+      }
+      userId = existing?.id ?? null;
+    }
+    if (!userId) throw new NotFoundException('No Arah account uses that Google account.');
+    const removed = await this.removeAccount(userId);
+    if (!removed) throw new NotFoundException('No Arah account uses that Google account.');
+    return { deleted: true };
   }
 
   private async webClientId(): Promise<string | null> {

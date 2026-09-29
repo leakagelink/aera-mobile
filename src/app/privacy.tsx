@@ -60,7 +60,7 @@ export default function PrivacyScreen() {
         <Info title="Foreground location" detail={permission === 'granted' ? (watching ? 'On while this flow needs it' : 'Allowed, not currently watching') : permission === 'denied' ? 'Denied' : 'Not requested yet'} />
         <Info title="Background location" detail="Not used. Arah does not track you when the app is closed or in the background." />
         <Info title="Trip storage" detail="Trips stay on this phone. Deleting the account also clears the trip history on the phone you use to delete it." />
-        <Info title="Other services" detail="Map tiles come from OpenFreeMap. Place search uses Nominatim. Routes use OSRM. Weather uses OpenWeather through Arah. The assistant uses Google Gemini. Google sign-in uses your Google account. Notifications use Firebase Cloud Messaging. Arah does not show ads." />
+        <Info title="Other services" detail="Map tiles come from OpenFreeMap. Place search uses Nominatim. Routes use OSRM. Weather uses OpenWeather through Arah. The assistant uses Google Gemini, and Relay Models with DeepSeek if Gemini cannot answer. Traffic, when available, uses TomTom. Google sign-in uses your Google account. Notifications use Firebase Cloud Messaging. Arah does not show ads." />
         <Pressable accessibilityRole="button" onPress={() => void Linking.openURL(arahPolicyUrls.privacy)} style={[styles.action, { backgroundColor: theme.colors.surface }]}>
           <AppText size={15} weight="semibold">
             Privacy policy

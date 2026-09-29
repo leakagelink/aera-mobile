@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req } from '@nestjs/common';
 import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 import { Public } from '../../common/decorators/public.decorator';
@@ -58,6 +58,18 @@ export class AuthController {
   @Post('google')
   google(@Body() body: GoogleDto, @Req() request: { ip?: string }) {
     return this.auth.loginWithGoogle(body.idToken, request.ip ?? null);
+  }
+
+  @Public()
+  @Get('google/client')
+  googleClient() {
+    return this.auth.publicWebClientId().then((clientId) => ({ clientId }));
+  }
+
+  @Public()
+  @Post('google/delete-account')
+  deleteGoogle(@Body() body: GoogleDto, @Req() request: { ip?: string }) {
+    return this.auth.deleteWithGoogle(body.idToken, request.ip ?? null);
   }
 
   @Public()

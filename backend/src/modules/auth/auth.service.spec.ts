@@ -1,4 +1,4 @@
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
 
 import { AuthService } from './auth.service';
@@ -52,6 +52,34 @@ describe('AuthService', () => {
       user: { email: 'ada@example.com' },
     });
     expect(query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO users'), expect.any(Array));
+    fetchMock.mockRestore();
+  });
+
+  it('deletes a verified Google account and does not create one', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        aud: '123-web.apps.googleusercontent.com',
+        email: 'ada@example.com',
+        email_verified: 'true',
+        sub: 'google-sub',
+        name: 'Ada',
+      }),
+    } as Response);
+    const query = jest.fn(async (sql: string) => {
+      if (String(sql).includes('web_client_id')) return { rows: [{ web_client_id: '123-web.apps.googleusercontent.com' }] };
+      if (String(sql).includes('google_sub')) return { rows: [{ id: 'user-1' }] };
+      if (String(sql).includes('DELETE')) return { rows: [], rowCount: 1 };
+      return { rows: [] };
+    });
+    await expect(service(query).deleteWithGoogle('google-id-token-value-long-enough', null)).resolves.toEqual({ deleted: true });
+    expect(query).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM users'), ['user-1']);
+    expect(query).not.toHaveBeenCalledWith(expect.stringContaining('INSERT INTO users'), expect.any(Array));
+    query.mockImplementation(async (sql: string) => {
+      if (String(sql).includes('web_client_id')) return { rows: [{ web_client_id: '123-web.apps.googleusercontent.com' }] };
+      return { rows: [] };
+    });
+    await expect(service(query).deleteWithGoogle('google-id-token-value-long-enough', null)).rejects.toBeInstanceOf(NotFoundException);
     fetchMock.mockRestore();
   });
 
