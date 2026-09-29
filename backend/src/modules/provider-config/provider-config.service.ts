@@ -156,7 +156,11 @@ export class ProviderConfigService {
   }
 
   activeGemini(): Promise<(ResolvedProvider & { model: string }) | null> {
-    return this.activeKeyed('ai', 'gemini', this.config.geminiApiKey, 'https://generativelanguage.googleapis.com', this.config.geminiModel);
+    return this.configuredBySlug('gemini', this.config.geminiApiKey, 'https://generativelanguage.googleapis.com', this.config.geminiModel);
+  }
+
+  activeRelay(): Promise<(ResolvedProvider & { model: string }) | null> {
+    return this.configuredBySlug('relay', null, 'https://api.relaymodels.com/v1', 'gpt-5-mini');
   }
 
   activeTomTom(): Promise<ResolvedProvider | null> {
@@ -235,6 +239,37 @@ export class ProviderConfigService {
         throw new BadRequestException(`This key is already saved for ${row.name}. Each provider needs its own key.`);
       }
     }
+  }
+
+  private async configuredBySlug(slug: ProviderSlug, envKey: string | null, fallbackUrl: string, model: string | null): Promise<(ResolvedProvider & { model: string }) | null> {
+    const row = await this.providers.findByProvider(slug);
+    if (row?.provider === slug) {
+      if (!row.enabled) return null;
+      const apiKey = row.api_key_encrypted ? this.decryptStored(row.api_key_encrypted) : envKey;
+      if (!apiKey) return null;
+      return {
+        provider: slug,
+        providerType: row.provider_type,
+        baseUrl: row.base_url || fallbackUrl,
+        apiKey,
+        timeoutMs: row.timeout_ms,
+        enabled: true,
+        source: 'database',
+        model: resolvedModel(slug, row.model, model),
+      };
+    }
+    if (!envKey) return null;
+    const entry = catalogEntry(slug);
+    return {
+      provider: slug,
+      providerType: entry?.providerType ?? 'ai',
+      baseUrl: fallbackUrl,
+      apiKey: envKey,
+      timeoutMs: 10_000,
+      enabled: true,
+      source: 'environment',
+      model: resolvedModel(slug, null, model),
+    };
   }
 
   private async activeKeyed(type: ProviderType, slug: ProviderSlug, envKey: string | null, fallbackUrl: string, model: string | null): Promise<(ResolvedProvider & { model: string }) | null> {
@@ -330,8 +365,9 @@ function resolveKeyUpdate(
 }
 
 function resolvedModel(slug: ProviderSlug, stored: string | null | undefined, fallback: string | null): string {
-  const configured = stored?.trim() || fallback;
-  return slug === 'gemini' ? currentGeminiModel(configured) : configured || '';
+  if (slug === 'gemini') return currentGeminiModel(stored?.trim() || fallback);
+  if (slug === 'relay') return stored?.trim() || fallback?.trim() || 'gpt-5-mini';
+  return stored?.trim() || fallback || '';
 }
 
 function trimBase(value: string): string {

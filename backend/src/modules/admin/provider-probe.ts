@@ -29,6 +29,7 @@ export async function probeProvider(provider: ProviderSlug, target: { baseUrl: s
     }
     if (provider === 'tomtom') return probeTomTom(target, started);
     if (provider === 'gemini') return probeGemini(target, started);
+    if (provider === 'relay') return probeRelay(target, started);
     if (provider === 'osrm') return probeOsrm(target, started);
     if (provider === 'nominatim') return probeNominatim(target, config.geocodingUserAgent, started);
     return probeMartin(target, started);
@@ -58,6 +59,17 @@ async function probeGemini(target: { baseUrl: string; apiKey: string | null; tim
   url.searchParams.set('key', target.apiKey);
   const status = await statusOnly(url.toString(), target.timeoutMs);
   return done(started, status >= 200 && status < 300, status >= 200 && status < 300 ? 'Gemini connection successful' : 'Gemini connection failed');
+}
+
+async function probeRelay(target: { baseUrl: string; apiKey: string | null; timeoutMs: number }, started: number): Promise<ProbeResult> {
+  if (!target.apiKey) return done(started, false, 'Relay Models is not configured');
+  const url = new URL('models', ensureSlash(target.baseUrl));
+  const response = await fetch(url.toString(), {
+    signal: AbortSignal.timeout(target.timeoutMs),
+    headers: { Accept: 'application/json', Authorization: `Bearer ${target.apiKey}` },
+  });
+  await response.arrayBuffer().catch(() => undefined);
+  return done(started, response.ok, response.ok ? 'Relay Models connection successful' : 'Relay Models connection failed');
 }
 
 async function probeOsrm(target: { baseUrl: string; timeoutMs: number }, started: number): Promise<ProbeResult> {
@@ -99,6 +111,7 @@ function failureMessage(provider: ProviderSlug): string {
     openweather: 'OpenWeather connection failed',
     tomtom: 'TomTom connection failed',
     gemini: 'Gemini connection failed',
+    relay: 'Relay Models connection failed',
     osrm: 'OSRM connection failed',
     nominatim: 'Nominatim connection failed',
     martin: 'Map tile connection failed',

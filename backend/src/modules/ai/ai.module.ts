@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { GeminiProvider } from '../../providers/gemini.provider';
+import { RelayProvider } from '../../providers/relay.provider';
 import { PlacesModule } from '../places/places.module';
 import { RoutesModule } from '../routes/routes.module';
 import { TrafficModule } from '../traffic/traffic.module';
@@ -13,6 +14,6 @@ import { ArahToolRegistry } from './tool-registry';
 @Module({
   imports: [PlacesModule, RoutesModule, TripsModule, WeatherModule, TrafficModule],
   controllers: [AiController],
-  providers: [AiService, ArahToolRegistry, GeminiProvider],
+  providers: [AiService, ArahToolRegistry, GeminiProvider, RelayProvider],
 })
 export class AiModule {}

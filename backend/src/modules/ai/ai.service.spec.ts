@@ -1,19 +1,27 @@
+import { aiError } from '../../providers/gemini.provider';
 import { AiService } from './ai.service';
 
 const config = { aiMaxToolRounds: 5, aiMaxMessageChars: 50, aiMaxContextMessages: 2, aiRateLimitPerMinute: 2 };
 const resolved = { enabled: true, apiKey: 'gemini-test-key', baseUrl: 'https://generativelanguage.googleapis.com', model: 'gemini-2.0-flash', timeoutMs: 1000, provider: 'gemini', providerType: 'ai', source: 'environment' };
 
-function service(options: { rounds?: number; allowed?: boolean; gemini?: unknown; execute?: jest.Mock; generate?: jest.Mock } = {}) {
+const relayResolved = { enabled: true, apiKey: 'relay-secret-key', baseUrl: 'https://api.relaymodels.com/v1', model: 'gpt-5-mini', timeoutMs: 1000, provider: 'relay', providerType: 'ai', source: 'database' };
+
+function service(options: { rounds?: number; allowed?: boolean; gemini?: unknown; relay?: unknown; execute?: jest.Mock; generate?: jest.Mock; relayGenerate?: jest.Mock } = {}) {
   const generate = options.generate ?? jest.fn(async () => ({ text: 'Your speed is 12 m/s.', functionCalls: [] }));
+  const relayGenerate = options.relayGenerate ?? jest.fn(async () => ({ text: 'Backup answer.', functionCalls: [] }));
   const execute = options.execute ?? jest.fn(async () => ({ result: { speed: 12, unit: 'm/s' }, activity: { name: 'getCurrentSpeed', status: 'ok', activity: 'Checking your speed...' } }));
   const ai = new AiService(
     { generate } as never,
+    { generate: relayGenerate } as never,
     { declarations: () => [{ name: 'getCurrentSpeed', description: 'speed', parameters: {} }], execute } as never,
-    { activeGemini: async () => ('gemini' in options ? options.gemini : resolved) } as never,
+    {
+      activeGemini: async () => ('gemini' in options ? options.gemini : resolved),
+      activeRelay: async () => ('relay' in options ? options.relay : null),
+    } as never,
     { takeToken: async () => options.allowed ?? true } as never,
     { ...config, aiMaxToolRounds: options.rounds ?? config.aiMaxToolRounds } as never,
   );
-  return { ai, generate, execute };
+  return { ai, generate, execute, relayGenerate };
 }
 
 describe('AiService', () => {
@@ -59,6 +67,28 @@ describe('AiService', () => {
     const missing = service({ gemini: null });
     await expect(missing.ai.chat('user-1', { message: 'Hello' })).rejects.toMatchObject({ status: 503 });
     await expect(service().ai.chat('user-1', { message: 'x'.repeat(51) })).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('switches to Relay Models when Gemini fails and keeps both keys out of the answer', async () => {
+    const generate = jest.fn(async () => {
+      throw aiError('GEMINI_UNAVAILABLE', 'The assistant is unavailable.', 502);
+    });
+    const relayGenerate = jest.fn(async () => ({ text: 'Backup answer.', functionCalls: [] }));
+    const { ai } = service({ generate, relayGenerate, relay: relayResolved });
+    const result = await ai.chat('user-1', { message: 'Hello' });
+    expect(result.message).toBe('Backup answer.');
+    expect(generate).toHaveBeenCalledTimes(1);
+    expect(relayGenerate).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(result)).not.toContain('gemini-test-key');
+    expect(JSON.stringify(result)).not.toContain('relay-secret-key');
+  });
+
+  it('uses Relay Models when Gemini is not configured', async () => {
+    const relayGenerate = jest.fn(async () => ({ text: 'Relay only.', functionCalls: [] }));
+    const { ai, generate } = service({ gemini: null, relay: relayResolved, relayGenerate });
+    await expect(ai.chat('user-1', { message: 'Hello' })).resolves.toMatchObject({ message: 'Relay only.' });
+    expect(generate).not.toHaveBeenCalled();
+    expect(relayGenerate).toHaveBeenCalledTimes(1);
   });
 
   it('sends only the bounded conversation', async () => {

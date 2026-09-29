@@ -4,6 +4,7 @@ import { RedisService } from '../../cache/redis.service';
 import { APP_CONFIG } from '../../config/config.module';
 import type { AppConfig } from '../../config/load-config';
 import { GeminiProvider, aiError, type GeminiContent, type GeminiFunctionCall, type GeminiTurn } from '../../providers/gemini.provider';
+import { RelayProvider, isRelayFallbackError } from '../../providers/relay.provider';
 import { ProviderConfigService } from '../provider-config/provider-config.service';
 import { ArahToolRegistry, type AiClientContext, type ToolActivity } from './tool-registry';
 
@@ -20,6 +21,7 @@ const SYSTEM = [
 export class AiService {
   constructor(
     private readonly gemini: GeminiProvider,
+    private readonly relay: RelayProvider,
     private readonly tools: ArahToolRegistry,
     private readonly configs: ProviderConfigService,
     private readonly redis: RedisService,
@@ -33,25 +35,39 @@ export class AiService {
     }
     const allowed = await this.redis.takeToken(`aera:rl:ai:${userId}`, this.config.aiRateLimitPerMinute, 60);
     if (!allowed) throw aiError('AI_RATE_LIMITED', 'Too many assistant requests. Try again shortly.', 429);
-    const resolved = await this.configs.activeGemini();
-    if (!resolved?.enabled || !resolved.apiKey) throw aiError('GEMINI_NOT_CONFIGURED', 'The assistant is not configured.', 503);
+    const gemini = await this.configs.activeGemini();
+    const relay = await this.configs.activeRelay();
+    const geminiConfig = gemini?.enabled && gemini.apiKey ? gemini : null;
+    const relayConfig = relay?.enabled && relay.apiKey ? relay : null;
+    if (!geminiConfig && !relayConfig) throw aiError('GEMINI_NOT_CONFIGURED', 'The assistant is not configured.', 503);
 
     const contents = this.contents(input.history ?? [], message);
     const declarations = this.tools.declarations();
     const toolCalls: ToolActivity[] = [];
     const counts = new Map<string, number>();
     let rejected = 0;
+    let useRelay = !geminiConfig;
 
     for (let round = 0; round < this.config.aiMaxToolRounds; round += 1) {
-      const turn = await this.gemini.generate({
-        baseUrl: resolved.baseUrl,
-        apiKey: resolved.apiKey,
-        model: resolved.model,
-        timeoutMs: resolved.timeoutMs,
+      const request = {
         system: SYSTEM,
         contents,
         tools: declarations,
-      });
+      };
+      const speak = async (kind: 'gemini' | 'relay') => {
+        const active = kind === 'relay' ? relayConfig : geminiConfig;
+        if (!active?.apiKey) throw aiError('GEMINI_NOT_CONFIGURED', 'The assistant is not configured.', 503);
+        const payload = { ...request, baseUrl: active.baseUrl, apiKey: active.apiKey, model: active.model, timeoutMs: active.timeoutMs };
+        return kind === 'relay' ? this.relay.generate(payload) : this.gemini.generate(payload);
+      };
+      let turn: GeminiTurn;
+      try {
+        turn = await speak(useRelay ? 'relay' : 'gemini');
+      } catch (error) {
+        if (useRelay || !relayConfig || !isRelayFallbackError(error)) throw error;
+        useRelay = true;
+        turn = await speak('relay');
+      }
       if (turn.functionCalls.length === 0) {
         return { message: turn.text ?? 'I could not answer that from the available Arah data.', toolCalls };
       }

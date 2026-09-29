@@ -152,7 +152,7 @@ function providerForm(entry, saved) {
     <label>Default <select name="isDefault"><option value="false">OFF</option><option value="true">ON</option></select></label>
     <label>Base URL <input name="baseUrl" required /></label>
     <label>API key <input name="apiKey" type="password" autocomplete="off" placeholder="Leave empty to keep the current key" /></label>
-    <p class="status">Paste only the ${entry.name} key. OpenWeather, TomTom, and Gemini each keep a different key.</p>
+    <p class="status">${entry.provider === 'relay' ? 'Paste the Relay Models key from relaymodels.com. Arah calls this API only when Gemini cannot answer. Leave Default off so Gemini stays first.' : 'Paste only the ' + entry.name + ' key. OpenWeather, TomTom, Gemini, and Relay Models each keep a different key.'}</p>
     <p class="status" data-key></p>
     <label>Model <input name="model" /></label>
     <label>Timeout (ms) <input name="timeoutMs" type="number" min="1000" max="30000" required /></label>
@@ -161,7 +161,8 @@ function providerForm(entry, saved) {
   `;
   form.elements.baseUrl.value = saved?.baseUrl || entry.defaultBaseUrl;
   form.elements.timeoutMs.value = saved?.timeoutMs || 10000;
-  form.elements.model.value = saved?.model || '';
+  form.elements.model.value = saved?.model || (entry.provider === 'relay' ? 'gpt-5-mini' : '');
+  form.elements.model.placeholder = entry.provider === 'relay' ? 'gpt-5-mini' : '';
   form.elements.enabled.value = String(Boolean(saved?.enabled));
   form.elements.isDefault.value = String(Boolean(saved?.isDefault));
   form.querySelector('[data-key]').textContent = saved?.apiKeyConfigured ? `Current key ••••••••${saved.apiKeyLast4 || ''}` : 'No API key stored.';

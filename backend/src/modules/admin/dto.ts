@@ -3,7 +3,7 @@ import { IsBoolean, IsIn, IsInt, IsObject, IsOptional, IsString, IsUrl, Max, Max
 
 import type { ProviderSlug, ProviderType } from '../../providers/catalog';
 
-const PROVIDERS = ['gemini', 'tomtom', 'openweather', 'osrm', 'nominatim', 'martin'] as const;
+const PROVIDERS = ['gemini', 'relay', 'tomtom', 'openweather', 'osrm', 'nominatim', 'martin'] as const;
 const TYPES = ['ai', 'traffic', 'weather', 'routing', 'geocoding', 'map'] as const;
 
 export class CreateProviderDto {
