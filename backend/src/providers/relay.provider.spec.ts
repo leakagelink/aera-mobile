@@ -1,4 +1,4 @@
-import { RelayProvider, toRelayMessages } from './relay.provider';
+import { currentRelayModel, RelayProvider, toRelayMessages } from './relay.provider';
 
 const input = {
   baseUrl: 'https://api.relaymodels.com/v1',
@@ -9,6 +9,14 @@ const input = {
   contents: [{ role: 'user' as const, parts: [{ text: 'What is my speed?' }] }],
   tools: [{ name: 'getCurrentSpeed', description: 'Read speed', parameters: { type: 'object', properties: {} } }],
 };
+
+describe('currentRelayModel', () => {
+  it('replaces the expensive default with the cheap tool-calling model', () => {
+    expect(currentRelayModel('gpt-5-mini')).toBe('qwen3.7-plus');
+    expect(currentRelayModel('  ')).toBe('qwen3.7-plus');
+    expect(currentRelayModel('gpt-5.6-luna')).toBe('gpt-5.6-luna');
+  });
+});
 
 describe('RelayProvider', () => {
   it('sends the key as a bearer token and reads a tool call', async () => {
@@ -33,7 +41,9 @@ describe('RelayProvider', () => {
     expect(seenUrl).not.toContain('relay-test-key');
     expect(seenBody).not.toContain('relay-test-key');
     expect(seenKey).toBe('relay-test-key');
-    expect(JSON.parse(seenBody).model).toBe('gpt-5-mini');
+    const body = JSON.parse(seenBody) as { model: string; max_tokens: number };
+    expect(body.model).toBe('qwen3.7-plus');
+    expect(body.max_tokens).toBe(400);
   });
 
   it('keeps a Gemini tool result attached to the same call id', () => {

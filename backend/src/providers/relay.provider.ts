@@ -3,7 +3,15 @@ import { aiError, type GeminiContent, type GeminiFunctionCall, type GeminiToolDe
 
 export type RelayFetch = (url: string, init: { body: string; timeoutMs: number; apiKey: string }) => Promise<{ status: number; body: unknown }>;
 
-const RELAY_MODEL = 'gpt-5-mini';
+export const RELAY_MODEL = 'qwen3.7-plus';
+
+const REPLACED_RELAY_MODELS = new Set(['gpt-5-mini']);
+
+export function currentRelayModel(configured: string | null | undefined): string {
+  const model = configured?.trim();
+  if (!model || REPLACED_RELAY_MODELS.has(model)) return RELAY_MODEL;
+  return model;
+}
 
 export class RelayProvider {
   constructor(private readonly fetchRelay: RelayFetch = defaultRelayFetch) {}
@@ -20,7 +28,7 @@ export class RelayProvider {
     if (!input.apiKey.trim()) throw aiError('RELAY_NOT_CONFIGURED', 'The assistant is not configured.', 503);
     const url = new URL('chat/completions', ensureSlash(input.baseUrl));
     const body = JSON.stringify({
-      model: input.model.trim() || RELAY_MODEL,
+      model: currentRelayModel(input.model),
       messages: toRelayMessages(input.system, input.contents),
       tools: input.tools.map((tool) => ({
         type: 'function',
@@ -28,7 +36,7 @@ export class RelayProvider {
       })),
       tool_choice: 'auto',
       temperature: 0.2,
-      max_tokens: 2048,
+      max_tokens: 400,
     });
     if (body.includes(input.apiKey) || url.toString().includes(input.apiKey)) {
       throw aiError('RELAY_AUTH_FAILED', 'The assistant request was rejected.', 502);

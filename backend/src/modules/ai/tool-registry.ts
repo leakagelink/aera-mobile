@@ -337,6 +337,6 @@ function providerFailure(error: unknown, fallback: string): { code: string } {
 
 function bound(result: unknown): unknown {
   const text = JSON.stringify(result);
-  if (text.length <= 6000) return result;
+  if (text.length <= 1200) return result;
   return unavailable('AI_TOOL_EXECUTION_FAILED');
 }

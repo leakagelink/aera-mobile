@@ -39,8 +39,9 @@ export class GeminiProvider {
   }): Promise<GeminiTurn> {
     if (!input.apiKey.trim()) throw aiError('GEMINI_NOT_CONFIGURED', 'The assistant is not configured.', 503);
     const url = new URL(`/v1beta/models/${encodeURIComponent(input.model)}:generateContent`, ensureSlash(input.baseUrl));
-    const generationConfig: Record<string, unknown> = { maxOutputTokens: 2048, temperature: 0.2 };
+    const generationConfig: Record<string, unknown> = { maxOutputTokens: 400, temperature: 0.2 };
     if (input.model.startsWith('gemini-3')) generationConfig.thinkingConfig = { thinkingLevel: 'low' };
+    else if (input.model.includes('flash') && !input.model.includes('flash-lite')) generationConfig.thinkingConfig = { thinkingBudget: 0 };
     const body = JSON.stringify({
       systemInstruction: { parts: [{ text: input.system }] },
       contents: input.contents,

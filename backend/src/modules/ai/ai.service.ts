@@ -9,7 +9,7 @@ import { ProviderConfigService } from '../provider-config/provider-config.servic
 import { ArahToolRegistry, type AiClientContext, type ToolActivity } from './tool-registry';
 
 const SYSTEM = [
-  'You are Arah, a navigation assistant. Speak briefly and plainly.',
+  'You are Arah, a navigation assistant. Answer in one or two short sentences.',
   'Never invent location, GPS, speed, traffic, weather, routes, ETA, or trip history.',
   'When a question needs real Arah data, call a registered tool and answer only from its result.',
   'If a tool result contains a code such as LOCATION_UNAVAILABLE, say that information is unavailable.',
@@ -106,7 +106,7 @@ export class AiService {
     const prior = history
       .slice(-this.config.aiMaxContextMessages)
       .flatMap((entry) => {
-        const text = entry.text.trim().slice(0, 500);
+        const text = entry.text.trim().slice(0, 200);
         if (!text || (entry.role !== 'user' && entry.role !== 'assistant')) return [];
         return [{ role: entry.role === 'assistant' ? ('model' as const) : ('user' as const), parts: [{ text }] }];
       });

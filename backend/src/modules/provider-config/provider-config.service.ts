@@ -4,6 +4,7 @@ import { APP_CONFIG } from '../../config/config.module';
 import type { AppConfig } from '../../config/load-config';
 import { catalogEntry, providerStatus, type ProviderHealthStatus, type ProviderSlug, type ProviderType } from '../../providers/catalog';
 import { currentGeminiModel } from '../../providers/gemini-model';
+import { currentRelayModel } from '../../providers/relay.provider';
 import { SecretEncryptionService } from '../../security/secret-encryption.service';
 import { stripSecretFields } from '../../security/sanitize';
 import { ProviderConfigRepository, type ProviderRow } from './provider-config.repository';
@@ -160,7 +161,7 @@ export class ProviderConfigService {
   }
 
   activeRelay(): Promise<(ResolvedProvider & { model: string }) | null> {
-    return this.configuredBySlug('relay', null, 'https://api.relaymodels.com/v1', 'gpt-5-mini');
+    return this.configuredBySlug('relay', null, 'https://api.relaymodels.com/v1', 'qwen3.7-plus');
   }
 
   activeTomTom(): Promise<ResolvedProvider | null> {
@@ -207,7 +208,7 @@ export class ProviderConfigService {
       baseUrl: row.base_url,
       apiKeyConfigured: Boolean(row.api_key_encrypted) || Boolean(this.envKey(row.provider)),
       apiKeyLast4: row.api_key_last4,
-      model: row.model,
+      model: displayedModel(row.provider, row.model),
       enabled: row.enabled,
       isDefault: row.is_default,
       timeoutMs: row.timeout_ms,
@@ -364,9 +365,15 @@ function resolveKeyUpdate(
   return { encrypted: encryption.encrypt(trimmed, key), last4: trimmed.slice(-4), replaced: true };
 }
 
+function displayedModel(provider: string, stored: string | null): string | null {
+  if (provider === 'gemini') return currentGeminiModel(stored);
+  if (provider === 'relay') return currentRelayModel(stored);
+  return stored;
+}
+
 function resolvedModel(slug: ProviderSlug, stored: string | null | undefined, fallback: string | null): string {
   if (slug === 'gemini') return currentGeminiModel(stored?.trim() || fallback);
-  if (slug === 'relay') return stored?.trim() || fallback?.trim() || 'gpt-5-mini';
+  if (slug === 'relay') return currentRelayModel(stored?.trim() || fallback);
   return stored?.trim() || fallback || '';
 }
 
