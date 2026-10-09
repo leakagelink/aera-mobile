@@ -37,6 +37,12 @@ describe('AiService', () => {
     expect(JSON.stringify(result)).not.toContain('gemini-test-key');
   });
 
+  it('asks the model to reply in the language the user selected', async () => {
+    const { ai, generate } = service();
+    await ai.chat('user-1', { message: 'Namaste', language: 'hi' });
+    expect(generate.mock.calls[0][0].system).toContain('Reply in Hindi');
+  });
+
   it('stops after the configured tool rounds and after repeated rejections', async () => {
     const generate = jest.fn(async () => ({ text: null, functionCalls: [{ name: 'getWeather', args: {} }] }));
     const limited = service({ generate, rounds: 1 });

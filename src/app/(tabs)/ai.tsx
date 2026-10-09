@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/AppText';
@@ -9,6 +9,8 @@ import { sendAiChat, type AiChatTurn } from '@/services/ai/chat';
 import { font } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
 import { errorMessage } from '@/utils/errors';
+
+const prompts = ['Nearest hospital', 'Nearest petrol pump', 'Weather here', 'Mujhe kahin ghoomne jaana hai'];
 
 type TranscriptItem = AiChatTurn & { activities?: string[] };
 
@@ -45,8 +47,23 @@ export default function AiScreen() {
           Talk to your map
         </AppText>
         <AppText size={15} color={theme.colors.mutedForeground} style={styles.copy}>
-          Ask about your location, route, speed, trips, weather, or traffic. Arah answers from the app and says when something is unavailable.
+          Talk about the trip, a nearby place, or something ordinary. Arah answers in your language and only uses real map data.
         </AppText>
+        <View style={styles.prompts}>
+          {prompts.map((prompt) => (
+            <Pressable
+              key={prompt}
+              accessibilityRole="button"
+              disabled={pending}
+              onPress={() => void submit(prompt)}
+              style={[styles.prompt, { backgroundColor: theme.colors.nav, borderColor: theme.colors.glassBorder, opacity: pending ? 0.5 : 1 }]}
+            >
+              <AppText size={13} weight="medium">
+                {prompt}
+              </AppText>
+            </Pressable>
+          ))}
+        </View>
         {items.map((item, index) => (
           <GlassCard key={`${item.role}-${index}`} padded style={styles.card}>
             <AppText size={12} color={theme.colors.mutedForeground}>
@@ -98,6 +115,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { paddingHorizontal: 20 },
   copy: { marginTop: 12, lineHeight: 22 },
+  prompts: { marginTop: 16, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  prompt: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
   card: { marginTop: 16 },
   activity: { marginTop: 8 },
   message: { marginTop: 8, lineHeight: 22 },

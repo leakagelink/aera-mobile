@@ -9,13 +9,28 @@ import { ProviderConfigService } from '../provider-config/provider-config.servic
 import { ArahToolRegistry, type AiClientContext, type ToolActivity } from './tool-registry';
 
 const SYSTEM = [
-  'You are Arah, a navigation assistant. Answer in one or two short sentences.',
-  'Never invent location, GPS, speed, traffic, weather, routes, ETA, or trip history.',
-  'When a question needs real Arah data, call a registered tool and answer only from its result.',
-  'If a tool result contains a code such as LOCATION_UNAVAILABLE, say that information is unavailable.',
+  'You are Arah, a friendly navigation companion. You are not a person and you do not have human feelings.',
+  'Reply in the user\'s language. Hindi, Hinglish, English, and other Indian languages are welcome. Keep place names and addresses exactly as the tools return them.',
+  'Casual conversation can be warm and brief: two or three short sentences, plus one follow-up when it helps.',
+  'For location, places, routes, ETA, speed, weather, traffic, or trips, call a tool and use only that result. Never invent those facts.',
+  'If a tool result contains a code, say that information is unavailable.',
   'Do not mention providers, API keys, SQL, or internal errors.',
   'Routing cannot avoid tolls or highways. If a result says not_supported, tell the user those constraints were not applied.',
 ].join(' ');
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: 'English',
+  hi: 'Hindi',
+  mr: 'Marathi',
+  ta: 'Tamil',
+  te: 'Telugu',
+  bn: 'Bengali',
+  gu: 'Gujarati',
+  kn: 'Kannada',
+  ml: 'Malayalam',
+  pa: 'Punjabi',
+  ur: 'Urdu',
+};
 
 @Injectable()
 export class AiService {
@@ -28,7 +43,7 @@ export class AiService {
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
-  async chat(userId: string, input: { message: string; history?: { role: 'user' | 'assistant'; text: string }[]; context?: AiClientContext }) {
+  async chat(userId: string, input: { message: string; history?: { role: 'user' | 'assistant'; text: string }[]; context?: AiClientContext; language?: string }) {
     const message = input.message.trim();
     if (!message || message.length > this.config.aiMaxMessageChars) {
       throw aiError('AI_MESSAGE_TOO_LARGE', 'That message is too long.', 400);
@@ -50,7 +65,7 @@ export class AiService {
 
     for (let round = 0; round < this.config.aiMaxToolRounds; round += 1) {
       const request = {
-        system: SYSTEM,
+        system: this.system(input.language),
         contents,
         tools: declarations,
       };
@@ -102,11 +117,17 @@ export class AiService {
     return { message: 'I could not finish that request within the lookup limit.', toolCalls };
   }
 
+  private system(language?: string): string {
+    const name = language ? LANGUAGE_NAMES[language] : undefined;
+    if (!name) return SYSTEM;
+    return `${SYSTEM} The user chose ${name}. Reply in ${name}.`;
+  }
+
   private contents(history: { role: 'user' | 'assistant'; text: string }[], message: string): GeminiContent[] {
     const prior = history
       .slice(-this.config.aiMaxContextMessages)
       .flatMap((entry) => {
-        const text = entry.text.trim().slice(0, 200);
+        const text = entry.text.trim().slice(0, 320);
         if (!text || (entry.role !== 'user' && entry.role !== 'assistant')) return [];
         return [{ role: entry.role === 'assistant' ? ('model' as const) : ('user' as const), parts: [{ text }] }];
       });

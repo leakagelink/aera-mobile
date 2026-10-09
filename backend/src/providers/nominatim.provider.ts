@@ -25,6 +25,23 @@ export class NominatimProvider implements PlaceSearchProvider, GeocodingProvider
     private readonly userAgent: string,
   ) {}
 
+  searchNearby(query: string, coordinate: Coordinate, radiusMeters: number): Promise<PlaceResult[]> {
+    const url = new URL('/search', this.baseUrl);
+    url.searchParams.set('q', query);
+    url.searchParams.set('format', 'jsonv2');
+    url.searchParams.set('limit', '8');
+    url.searchParams.set('viewbox', nearbyViewbox(coordinate, radiusMeters));
+    url.searchParams.set('bounded', '1');
+    return this.schedule(async () => {
+      const payload = await this.read(url);
+      if (!Array.isArray(payload)) return [];
+      return payload.flatMap((row) => {
+        const place = toPlace(asRow(row));
+        return place ? [place] : [];
+      });
+    });
+  }
+
   search(query: string): Promise<PlaceResult[]> {
     const url = new URL('/search', this.baseUrl);
     url.searchParams.set('q', query);
@@ -91,6 +108,16 @@ function toPlace(row: NominatimRow): PlaceResult | null {
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || !row.display_name || row.place_id === undefined) return null;
   const name = row.name?.trim() || row.display_name.split(',')[0]?.trim() || 'Place';
   return { id: String(row.place_id), name, address: row.display_name, latitude, longitude };
+}
+
+function nearbyViewbox(coordinate: Coordinate, radiusMeters: number): string {
+  const latitudeDelta = radiusMeters / 111_320;
+  const longitudeDelta = radiusMeters / (111_320 * Math.max(0.2, Math.cos((coordinate.latitude * Math.PI) / 180)));
+  const left = coordinate.longitude - longitudeDelta;
+  const right = coordinate.longitude + longitudeDelta;
+  const top = coordinate.latitude + latitudeDelta;
+  const bottom = coordinate.latitude - latitudeDelta;
+  return `${left},${top},${right},${bottom}`;
 }
 
 function delay(ms: number): Promise<void> {

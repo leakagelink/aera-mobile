@@ -1,5 +1,5 @@
 import { useIsFocused, useRouter } from 'expo-router';
-import { Coffee, LocateFixed, Plane, TrainFront, Trees } from 'lucide-react-native';
+import { Coffee, Fuel, Hospital, LocateFixed, ParkingCircle, Plane, TrainFront, Trees, Utensils } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,7 +19,11 @@ import { radius } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
 
 const suggestions = [
+  { id: 'hospital', label: 'Hospital', query: 'hospital', radius: 5_000, icon: Hospital },
+  { id: 'fuel', label: 'Petrol', query: 'fuel', radius: 5_000, icon: Fuel },
   { id: 'coffee', label: 'Coffee', query: 'cafe', radius: 3_000, icon: Coffee },
+  { id: 'food', label: 'Food', query: 'restaurant', radius: 3_000, icon: Utensils },
+  { id: 'parking', label: 'Parking', query: 'parking', radius: 2_000, icon: ParkingCircle },
   { id: 'parks', label: 'Parks', query: 'park', radius: 3_000, icon: Trees },
   { id: 'airport', label: 'Airport', query: 'airport', radius: 40_000, icon: Plane },
   { id: 'station', label: 'Station', query: '[railway=station]', radius: 15_000, icon: TrainFront },

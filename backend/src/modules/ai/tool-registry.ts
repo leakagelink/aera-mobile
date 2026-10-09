@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-import type { Coordinate } from '../../common/geo';
+import { distanceMeters, type Coordinate } from '../../common/geo';
 import { ArahException } from '../../security/weather-errors';
 import { PlacesService } from '../places/places.service';
 import { RoutesService } from '../routes/routes.service';
@@ -28,6 +28,13 @@ export type AiClientContext = {
     longitude: number;
     name?: string;
   };
+  savedPlaces?: {
+    name: string;
+    latitude: number;
+    longitude: number;
+    address?: string | null;
+    kind?: 'home' | 'work' | 'favorite';
+  }[];
 };
 
 export type ToolStatus = 'ok' | 'unavailable' | 'rejected';
@@ -79,14 +86,72 @@ export class ArahToolRegistry {
         { type: 'object', properties: { query: { type: 'string', maxLength: 120 } }, required: ['query'] },
         async (args) => {
           const places = await this.places.search(String(args.query));
-          return places.slice(0, 5).map((place) => ({
-            name: place.name,
-            latitude: place.latitude,
-            longitude: place.longitude,
-            address: place.address,
-          }));
+          return places.slice(0, 5).map(publicPlace);
         },
       ),
+      tool(
+        'searchNearby',
+        'Search real nearby places in an allowlisted category around the app location. Use this for hospital, fuel, restaurant, cafe, parking, or park. Never invent places.',
+        'Searching nearby...',
+        {
+          type: 'object',
+          properties: {
+            category: { type: 'string', enum: ['hospital', 'fuel', 'restaurant', 'cafe', 'parking', 'park'] },
+          },
+          required: ['category'],
+        },
+        async (args, context) => {
+          if (!context.location) return unavailable('LOCATION_UNAVAILABLE');
+          const category = String(args.category) as NearbyCategory;
+          const spec = NEARBY[category];
+          const origin = { latitude: context.location.latitude, longitude: context.location.longitude };
+          const places = await this.places.searchNearby(spec.query, origin, spec.radiusMeters);
+          if (places.length === 0) return unavailable('PLACES_UNAVAILABLE');
+          return places.map((place) => ({ ...publicPlace(place), distanceMeters: place.distanceMeters, category }));
+        },
+      ),
+      tool(
+        'getPlaceDetails',
+        'Read one real place by name or by coordinates. Do not invent an address.',
+        'Looking up that place...',
+        {
+          type: 'object',
+          properties: {
+            query: { type: 'string', maxLength: 120 },
+            latitude: coordinate.latitude,
+            longitude: coordinate.longitude,
+          },
+        },
+        async (args) => {
+          const point = pair(args.latitude, args.longitude);
+          if ((args.latitude !== undefined || args.longitude !== undefined) && !point) return unavailable('AI_TOOL_INVALID_ARGUMENTS');
+          if (point) {
+            const place = await this.places.reverse(point.latitude, point.longitude);
+            return place ? publicPlace(place) : unavailable('PLACES_UNAVAILABLE');
+          }
+          const query = typeof args.query === 'string' ? args.query.trim() : '';
+          if (!query) return unavailable('AI_TOOL_INVALID_ARGUMENTS');
+          const places = await this.places.search(query);
+          return places[0] ? publicPlace(places[0]) : unavailable('PLACES_UNAVAILABLE');
+        },
+      ),
+      tool('getSavedPlaces', 'Read Home, Work, and other places the user saved in Arah. Do not invent a home or work address.', 'Reading saved places...', emptySchema(), async (_args, context) => {
+        const fromPhone = (context.savedPlaces ?? []).slice(0, 8).map((place) => ({
+          name: place.name,
+          latitude: place.latitude,
+          longitude: place.longitude,
+          address: place.address ?? null,
+          kind: place.kind ?? 'favorite',
+        }));
+        const stored = await this.places.saved(context.userId).catch(() => []);
+        const merged = [...fromPhone];
+        for (const place of stored) {
+          if (merged.length >= 8) break;
+          const duplicate = merged.some((item) => distanceMeters(item, place) < 30);
+          if (!duplicate) merged.push({ ...publicPlace(place), kind: 'favorite' as const });
+        }
+        return { places: merged };
+      }),
       tool('calculateRoute', 'Calculate one driving route through Arah. Avoid flags are not applied.', 'Calculating route...', routeSchema(), (args, context) => this.routeResult(args, context, false)),
       tool('getAlternativeRoutes', 'Calculate alternative driving routes through Arah and compare them with the first route.', 'Calculating route...', routeSchema(), (args, context) => this.routeResult(args, context, true)),
       tool('getETA', 'Read arrival time from the active Arah navigation, or from a real route preview when both ends are known.', 'Calculating route...', routeSchema(false), async (args, context) => {
@@ -232,6 +297,26 @@ function tool(
   run: ToolDefinition['run'],
 ): ToolDefinition {
   return { name, description, activity, schema, run };
+}
+
+const NEARBY = {
+  hospital: { query: 'hospital', radiusMeters: 5_000 },
+  fuel: { query: 'fuel', radiusMeters: 5_000 },
+  restaurant: { query: 'restaurant', radiusMeters: 3_000 },
+  cafe: { query: 'cafe', radiusMeters: 3_000 },
+  parking: { query: 'parking', radiusMeters: 2_000 },
+  park: { query: 'park', radiusMeters: 3_000 },
+} as const;
+
+type NearbyCategory = keyof typeof NEARBY;
+
+function publicPlace(place: { name: string; latitude: number; longitude: number; address?: string | null }) {
+  return {
+    name: place.name,
+    latitude: place.latitude,
+    longitude: place.longitude,
+    address: place.address ?? null,
+  };
 }
 
 function emptySchema(): JsonSchema {

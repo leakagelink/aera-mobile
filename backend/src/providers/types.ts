@@ -19,6 +19,7 @@ export type RouteLeg = {
 export interface PlaceSearchProvider {
   readonly id: string;
   search(query: string): Promise<PlaceResult[]>;
+  searchNearby(query: string, coordinate: Coordinate, radiusMeters: number): Promise<PlaceResult[]>;
 }
 
 export interface GeocodingProvider {

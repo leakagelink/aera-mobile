@@ -69,6 +69,33 @@ class AiDestinationDto {
   name?: string;
 }
 
+class AiSavedPlaceDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(160)
+  name!: string;
+
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  latitude!: number;
+
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  longitude!: number;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(240)
+  address?: string | null;
+
+  @IsOptional()
+  @IsIn(['home', 'work', 'favorite'])
+  kind?: 'home' | 'work' | 'favorite';
+}
+
 class AiContextDto {
   @IsOptional()
   @ValidateNested()
@@ -84,6 +111,13 @@ class AiContextDto {
   @ValidateNested()
   @Type(() => AiDestinationDto)
   destination?: AiDestinationDto;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(8)
+  @ValidateNested({ each: true })
+  @Type(() => AiSavedPlaceDto)
+  savedPlaces?: AiSavedPlaceDto[];
 }
 
 class AiHistoryDto {
@@ -112,4 +146,8 @@ export class ChatDto {
   @ValidateNested()
   @Type(() => AiContextDto)
   context?: AiContextDto;
+
+  @IsOptional()
+  @IsIn(['en', 'hi', 'mr', 'ta', 'te', 'bn', 'gu', 'kn', 'ml', 'pa', 'ur'])
+  language?: 'en' | 'hi' | 'mr' | 'ta' | 'te' | 'bn' | 'gu' | 'kn' | 'ml' | 'pa' | 'ur';
 }

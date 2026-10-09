@@ -16,7 +16,12 @@ const route = {
 
 function registry(overrides: Partial<{ places: unknown; routes: unknown; trips: unknown; weather: unknown; traffic: unknown }> = {}) {
   return new ArahToolRegistry(
-    (overrides.places ?? { search: jest.fn(async () => [{ id: '1', name: 'Airport', address: 'Airport Road', latitude: 22.73, longitude: 75.87 }]) }) as never,
+    (overrides.places ?? {
+      search: jest.fn(async () => [{ id: '1', name: 'Airport', address: 'Airport Road', latitude: 22.73, longitude: 75.87 }]),
+      searchNearby: jest.fn(async () => [{ id: '2', name: 'City Hospital', address: 'MG Road', latitude: 22.721, longitude: 75.861, distanceMeters: 180 }]),
+      reverse: jest.fn(async () => ({ id: '3', name: 'Current road', address: 'AB Road', latitude: 22.72, longitude: 75.86 })),
+      saved: jest.fn(async () => []),
+    }) as never,
     (overrides.routes ?? { preview: jest.fn(async () => [route, { ...route, summary: 'Longer', distanceMeters: 1400, durationSeconds: 180 }]) }) as never,
     (overrides.trips ?? {
       list: jest.fn(async () => [
@@ -95,5 +100,17 @@ describe('ArahToolRegistry', () => {
     await expect(trafficDown.execute('getTraffic', {}, { userId, location })).resolves.toMatchObject({ result: { code: 'TRAFFIC_PROVIDER_NOT_CONFIGURED' } });
     await expect(registry().execute('getTraffic', {}, { userId })).resolves.toMatchObject({ result: { code: 'LOCATION_UNAVAILABLE' } });
     await expect(registry().execute('dropTable', {}, { userId })).resolves.toMatchObject({ result: { code: 'AI_TOOL_NOT_FOUND' } });
+  });
+
+  it('searches nearby categories and saved places without inventing a home', async () => {
+    const searchNearby = jest.fn(async () => [{ id: '2', name: 'City Hospital', address: 'MG Road', latitude: 22.721, longitude: 75.861, distanceMeters: 180 }]);
+    const tools = registry({ places: { search: jest.fn(), searchNearby, reverse: jest.fn(), saved: jest.fn(async () => []) } });
+    await expect(tools.execute('searchNearby', { category: 'hospital' }, { userId })).resolves.toMatchObject({ result: { code: 'LOCATION_UNAVAILABLE' } });
+    const nearby = await tools.execute('searchNearby', { category: 'hospital' }, { userId, location });
+    expect(nearby.result).toEqual([expect.objectContaining({ name: 'City Hospital', distanceMeters: 180, category: 'hospital' })]);
+    expect(searchNearby).toHaveBeenCalledWith('hospital', { latitude: 22.72, longitude: 75.86 }, 5000);
+    const saved = await tools.execute('getSavedPlaces', {}, { userId, savedPlaces: [{ name: 'Home', latitude: 22.7, longitude: 75.8, kind: 'home' }] });
+    expect(saved.result).toEqual({ places: [{ name: 'Home', latitude: 22.7, longitude: 75.8, address: null, kind: 'home' }] });
+    await expect(tools.execute('searchNearby', { category: 'airport' }, { userId, location })).resolves.toMatchObject({ result: { code: 'AI_TOOL_INVALID_ARGUMENTS' } });
   });
 });

@@ -1,6 +1,7 @@
 import { aeraApiRequest } from '@/services/api/client';
 import { navigationSnapshot } from '@/features/navigation/progress';
 import { useLocationStore } from '@/store/locationStore';
+import { usePreferencesStore } from '@/store/preferencesStore';
 import { selectedRoute, useSessionStore } from '@/store/sessionStore';
 
 export type AiChatTurn = {
@@ -21,6 +22,7 @@ export async function sendAiChat(message: string, history: AiChatTurn[]): Promis
       message,
       history: history.slice(-8).map((turn) => ({ role: turn.role, text: turn.text.slice(0, 500) })),
       context: currentAiContext(),
+      ...(replyLanguage() ? { language: replyLanguage() } : {}),
     },
   });
   if (!payload || typeof payload !== 'object') {
@@ -43,6 +45,11 @@ export async function sendAiChat(message: string, history: AiChatTurn[]): Promis
   return { message: body.message, toolCalls };
 }
 
+function replyLanguage() {
+  const language = usePreferencesStore.getState().assistantLanguage;
+  return language === 'auto' ? undefined : language;
+}
+
 function currentAiContext() {
   const location = useLocationStore.getState().current;
   const destination = useSessionStore.getState().destination;
@@ -51,6 +58,7 @@ function currentAiContext() {
     location?: { latitude: number; longitude: number; accuracy: number | null; heading: number | null; speed: number | null; timestamp: string };
     navigation?: { remainingMeters: number; remainingSeconds: number; eta: number };
     destination?: { latitude: number; longitude: number; name: string };
+    savedPlaces?: { name: string; latitude: number; longitude: number; address: string | null; kind: 'home' | 'work' }[];
   } = {};
   if (location) {
     context.location = {
@@ -73,5 +81,10 @@ function currentAiContext() {
   if (destination) {
     context.destination = { latitude: destination.latitude, longitude: destination.longitude, name: destination.name };
   }
+  const preferences = usePreferencesStore.getState();
+  const savedPlaces = [preferences.home ? { ...preferences.home, kind: 'home' as const } : null, preferences.work ? { ...preferences.work, kind: 'work' as const } : null].filter(
+    (place): place is NonNullable<typeof place> => place !== null,
+  );
+  if (savedPlaces.length > 0) context.savedPlaces = savedPlaces;
   return context;
 }

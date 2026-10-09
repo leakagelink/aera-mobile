@@ -1,6 +1,6 @@
 export type JsonSchema = {
   type: 'object';
-  properties: Record<string, { type: 'number' | 'string' | 'boolean'; minimum?: number; maximum?: number; maxLength?: number }>;
+  properties: Record<string, { type: 'number' | 'string' | 'boolean'; minimum?: number; maximum?: number; maxLength?: number; enum?: string[] }>;
   required?: string[];
 };
 
@@ -33,6 +33,7 @@ function parseValue(value: unknown, rule: JsonSchema['properties'][string]): unk
     if (typeof value !== 'string') return undefined;
     const trimmed = value.trim();
     if (!trimmed || (rule.maxLength !== undefined && trimmed.length > rule.maxLength)) return undefined;
+    if (rule.enum && !rule.enum.includes(trimmed)) return undefined;
     return trimmed;
   }
   if (typeof value !== 'boolean') return undefined;

@@ -13,8 +13,10 @@ import { MetricCard } from '@/components/ui/MetricCard';
 import { NavigationInstruction } from '@/components/ui/NavigationInstruction';
 import { ErrorState } from '@/components/ui/States';
 import { useForegroundLocation } from '@/features/location/useForegroundLocation';
+import { gpsWarning, hasArrived, rerouteDecision } from '@/features/navigation/reroute';
 import { navigationSnapshot } from '@/features/navigation/progress';
 import { completeNavigation } from '@/features/navigation/session';
+import { routingProvider } from '@/services/providers';
 import { computeTripMetrics } from '@/features/trips/metrics';
 import { useTripRecorder } from '@/features/trips/useTripRecorder';
 import { useLocationStore } from '@/store/locationStore';
@@ -36,7 +38,10 @@ export default function NavigationScreen() {
   const [follow, setFollow] = useState(true);
   const [expanded, setExpanded] = useState(false);
   const [ending, setEnding] = useState(false);
+  const [routeNote, setRouteNote] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const offSince = useRef<number | null>(null);
+  const lastReroute = useRef<number | null>(null);
   const units = usePreferencesStore((state) => state.units);
   const location = useLocationStore((state) => state.current);
   const destination = useSessionStore((state) => state.destination);
@@ -57,6 +62,39 @@ export default function NavigationScreen() {
     if (!draft) return null;
     return computeTripMetrics(draft.samples, draft.startedAt, now);
   }, [draft, now]);
+
+  const offRoute = snapshot?.offRoute ?? false;
+  useEffect(() => {
+    if (!location || !destination) return;
+    const decision = rerouteDecision({
+      offRoute,
+      accuracy: location.accuracy,
+      locationAgeMs: now - location.timestamp,
+      offSince: offSince.current,
+      now,
+      lastAttemptAt: lastReroute.current,
+    });
+    offSince.current = decision.offSince;
+    if (!decision.attempt) return;
+    lastReroute.current = now;
+    const mode = useSessionStore.getState().travelMode;
+    const request = now;
+    setRouteNote('Recalculating the route…');
+    void routingProvider()
+      .calculateRoute(location, destination, undefined, mode)
+      .then((routes) => {
+        if (lastReroute.current !== request) return;
+        if (routes.length === 0) {
+          setRouteNote('A new route is not available.');
+          return;
+        }
+        useSessionStore.getState().setRoutes(routes);
+        setRouteNote(null);
+      })
+      .catch(() => {
+        if (lastReroute.current === request) setRouteNote('The route could not be recalculated. Check the connection.');
+      });
+  }, [offRoute, location, destination, now]);
 
   useEffect(() => {
     if (!follow || !location) return;
@@ -96,6 +134,9 @@ export default function NavigationScreen() {
     confirmRef.current = confirmEnd;
   });
 
+  const arrived = snapshot ? hasArrived(snapshot.remainingMeters, snapshot.offRoute, location?.accuracy ?? null) : false;
+  const warning = location ? gpsWarning(location.accuracy, now - location.timestamp) : 'GPS signal lost. Waiting for a new location.';
+
   if (!route || !destination) {
     return (
       <View style={[styles.fill, { backgroundColor: theme.colors.background }]}>
@@ -115,12 +156,26 @@ export default function NavigationScreen() {
       />
       <View style={[styles.instruction, { top: insets.top + 8 }]}>
         <NavigationInstruction
-          instruction={snapshot?.instruction ?? 'Continue on the route'}
-          distance={formatDistance(snapshot?.instructionDistanceMeters ?? route.distanceMeters, units)}
-          following={snapshot?.followingInstruction}
+          instruction={arrived ? 'You have arrived' : (snapshot?.instruction ?? 'Continue on the route')}
+          distance={arrived ? destination.name : formatDistance(snapshot?.instructionDistanceMeters ?? route.distanceMeters, units)}
+          following={arrived ? undefined : snapshot?.followingInstruction}
           modifier={snapshot?.maneuverModifier}
           maneuverType={snapshot?.maneuverType}
         />
+        {warning ? (
+          <View style={[styles.note, { backgroundColor: theme.colors.nav }]}>
+            <AppText size={13} weight="medium">
+              {warning}
+            </AppText>
+          </View>
+        ) : null}
+        {routeNote ? (
+          <View style={[styles.note, { backgroundColor: theme.colors.nav }]}>
+            <AppText size={13} weight="medium">
+              {routeNote}
+            </AppText>
+          </View>
+        ) : null}
       </View>
       <View style={styles.recenter}>
         <IconButton icon={LocateFixed} label="Follow my location" primary={follow} onPress={() => setFollow(true)} />
@@ -172,7 +227,8 @@ function Stat({ value, label }: { value: string; label: string }) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  instruction: { position: 'absolute', left: 12, right: 12 },
+  instruction: { position: 'absolute', left: 12, right: 12, gap: 8 },
+  note: { marginTop: 8, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 10 },
   recenter: { position: 'absolute', right: 16, top: '46%' },
   bottom: { position: 'absolute', left: 12, right: 12, bottom: 0 },
   metrics: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 8 },

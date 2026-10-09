@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { BadGatewayException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 
 import { RedisService } from '../../cache/redis.service';
+import { distanceMeters, type Coordinate } from '../../common/geo';
 import { PROVIDERS } from '../../providers/provider.module';
 import type { ProviderSet } from '../../providers/registry';
 import type { PlaceResult } from '../../providers/types';
@@ -23,6 +24,15 @@ export class PlacesService {
     const places = await this.providers.search.search(query.trim());
     await this.redis.set(key, JSON.stringify(places), 60);
     return places;
+  }
+
+  async searchNearby(query: string, coordinate: Coordinate, radiusMeters: number): Promise<Array<PlaceResult & { distanceMeters: number }>> {
+    const places = await this.providers.search.searchNearby(query, coordinate, radiusMeters);
+    return places
+      .map((place) => ({ ...place, distanceMeters: Math.round(distanceMeters(coordinate, place)) }))
+      .filter((place) => place.distanceMeters <= radiusMeters)
+      .sort((left, right) => left.distanceMeters - right.distanceMeters)
+      .slice(0, 5);
   }
 
   async reverse(latitude: number, longitude: number): Promise<PlaceResult | null> {
