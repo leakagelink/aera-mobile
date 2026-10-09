@@ -4,6 +4,7 @@ import { APP_CONFIG } from '../../config/config.module';
 import type { AppConfig } from '../../config/load-config';
 import { catalogEntry, providerStatus, type ProviderHealthStatus, type ProviderSlug, type ProviderType } from '../../providers/catalog';
 import { currentGeminiModel } from '../../providers/gemini-model';
+import { DEFAULT_ELEVENLABS_VOICE } from '../../providers/elevenlabs.provider';
 import { currentRelayModel } from '../../providers/relay.provider';
 import { SecretEncryptionService } from '../../security/secret-encryption.service';
 import { stripSecretFields } from '../../security/sanitize';
@@ -162,6 +163,10 @@ export class ProviderConfigService {
 
   activeRelay(): Promise<(ResolvedProvider & { model: string }) | null> {
     return this.configuredBySlug('relay', null, 'https://api.relaymodels.com/v1', 'deepseek-v4-flash');
+  }
+
+  activeElevenLabs(): Promise<(ResolvedProvider & { model: string }) | null> {
+    return this.configuredBySlug('elevenlabs', null, 'https://api.elevenlabs.io', DEFAULT_ELEVENLABS_VOICE);
   }
 
   activeTomTom(): Promise<ResolvedProvider | null> {

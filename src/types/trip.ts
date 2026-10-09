@@ -40,4 +40,6 @@ export type TripDraft = {
   routeProvider?: string;
   plannedGeometry?: Coordinate[];
   samples: TripSample[];
+  pausedAt?: number | null;
+  pausedMs?: number;
 };

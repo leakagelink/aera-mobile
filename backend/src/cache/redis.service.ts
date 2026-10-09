@@ -64,6 +64,21 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  async addCount(key: string): Promise<void> {
+    try {
+      await this.connect();
+      await this.client?.incr(key);
+    } catch {
+      this.logger.warn(JSON.stringify({ event: 'redis_count_failed' }));
+    }
+  }
+
+  async readCount(key: string): Promise<number> {
+    const raw = await this.get(key);
+    const count = Number(raw);
+    return Number.isFinite(count) && count > 0 ? count : 0;
+  }
+
   async delete(key: string): Promise<void> {
     try {
       await this.connect();

@@ -5,10 +5,11 @@ import { useTripStore } from '@/store/tripStore';
 
 export function useTripRecorder(active: boolean): void {
   const location = useLocationStore((state) => state.current);
+  const paused = useTripStore((state) => Boolean(state.draft?.pausedAt));
   const lastTimestamp = useRef(0);
 
   useEffect(() => {
-    if (!active || !location) return;
+    if (!active || paused || !location) return;
     if (location.timestamp <= lastTimestamp.current) return;
     lastTimestamp.current = location.timestamp;
     void useTripStore.getState().appendSample({
@@ -20,5 +21,5 @@ export function useTripRecorder(active: boolean): void {
       heading: location.heading,
       altitude: location.altitude,
     });
-  }, [active, location]);
+  }, [active, location, paused]);
 }

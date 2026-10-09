@@ -1,5 +1,5 @@
-export type ProviderSlug = 'gemini' | 'relay' | 'tomtom' | 'openweather' | 'osrm' | 'nominatim' | 'martin';
-export type ProviderType = 'ai' | 'traffic' | 'weather' | 'routing' | 'geocoding' | 'map';
+export type ProviderSlug = 'gemini' | 'relay' | 'elevenlabs' | 'tomtom' | 'openweather' | 'osrm' | 'nominatim' | 'martin';
+export type ProviderType = 'ai' | 'traffic' | 'weather' | 'routing' | 'geocoding' | 'map' | 'voice';
 
 export type ProviderCatalogEntry = {
   provider: ProviderSlug;
@@ -12,6 +12,7 @@ export type ProviderCatalogEntry = {
 export const PROVIDER_CATALOG: readonly ProviderCatalogEntry[] = [
   { provider: 'gemini', providerType: 'ai', name: 'Gemini', defaultBaseUrl: 'https://generativelanguage.googleapis.com', requiresApiKey: true },
   { provider: 'relay', providerType: 'ai', name: 'Relay Models', defaultBaseUrl: 'https://api.relaymodels.com/v1', requiresApiKey: true },
+  { provider: 'elevenlabs', providerType: 'voice', name: 'ElevenLabs', defaultBaseUrl: 'https://api.elevenlabs.io', requiresApiKey: true },
   { provider: 'tomtom', providerType: 'traffic', name: 'TomTom', defaultBaseUrl: 'https://api.tomtom.com', requiresApiKey: true },
   { provider: 'openweather', providerType: 'weather', name: 'OpenWeather', defaultBaseUrl: 'https://api.openweathermap.org', requiresApiKey: true },
   { provider: 'osrm', providerType: 'routing', name: 'OSRM', defaultBaseUrl: 'https://router.project-osrm.org', requiresApiKey: false },

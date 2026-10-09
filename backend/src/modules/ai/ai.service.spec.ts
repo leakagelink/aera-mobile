@@ -18,7 +18,7 @@ function service(options: { rounds?: number; allowed?: boolean; gemini?: unknown
       activeGemini: async () => ('gemini' in options ? options.gemini : resolved),
       activeRelay: async () => ('relay' in options ? options.relay : null),
     } as never,
-    { takeToken: async () => options.allowed ?? true } as never,
+    { takeToken: async () => options.allowed ?? true, addCount: async () => undefined, get: async () => null, set: async () => undefined, delete: async () => undefined } as never,
     { ...config, aiMaxToolRounds: options.rounds ?? config.aiMaxToolRounds } as never,
   );
   return { ai, generate, execute, relayGenerate };
@@ -33,7 +33,7 @@ describe('AiService', () => {
     const { ai, execute } = service({ generate });
     const result = await ai.chat('user-1', { message: 'What is my speed?' });
     expect(execute).toHaveBeenCalledWith('getCurrentSpeed', {}, { userId: 'user-1' });
-    expect(result).toEqual({ message: 'You are moving at 12 m/s.', toolCalls: [{ name: 'getCurrentSpeed', status: 'ok', activity: 'Checking your speed...' }] });
+    expect(result).toEqual({ message: 'You are moving at 12 m/s.', toolCalls: [{ name: 'getCurrentSpeed', status: 'ok', activity: 'Checking your speed...' }], cards: [] });
     expect(JSON.stringify(result)).not.toContain('gemini-test-key');
   });
 

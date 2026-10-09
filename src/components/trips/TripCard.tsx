@@ -9,9 +9,11 @@ type Props = {
   title: string;
   detail: string;
   onPress: () => void;
+  onSelect?: () => void;
+  selected?: boolean;
 };
 
-export function TripCard({ title, detail, onPress }: Props) {
+export function TripCard({ title, detail, onPress, onSelect, selected = false }: Props) {
   const theme = useTheme();
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
@@ -26,6 +28,13 @@ export function TripCard({ title, detail, onPress }: Props) {
           {detail}
         </AppText>
       </View>
+      {onSelect ? (
+        <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onSelect} hitSlop={8}>
+          <AppText size={12} weight="semibold" color={selected ? theme.colors.primary : theme.colors.mutedForeground}>
+            {selected ? 'Selected' : 'Select'}
+          </AppText>
+        </Pressable>
+      ) : null}
       <ChevronRight color={theme.colors.mutedForeground} size={16} />
     </Pressable>
   );

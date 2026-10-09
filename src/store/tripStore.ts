@@ -24,6 +24,8 @@ type TripState = {
   hydrate: () => Promise<void>;
   startDraft: (input: StartDraftInput) => Promise<void>;
   appendSample: (sample: TripSample) => Promise<void>;
+  pauseDraft: () => Promise<void>;
+  resumeDraft: () => Promise<void>;
   finishDraft: () => Promise<Trip>;
   clearHistory: () => Promise<void>;
 };
@@ -87,6 +89,20 @@ export const useTripStore = create<TripState>((set, get) => ({
       if (latest) void repository.saveDraft(latest);
     }, 3000);
   },
+  async pauseDraft() {
+    const draft = get().draft;
+    if (!draft || draft.pausedAt) return;
+    const next = { ...draft, pausedAt: Date.now() };
+    await repository.saveDraft(next);
+    set({ draft: next });
+  },
+  async resumeDraft() {
+    const draft = get().draft;
+    if (!draft?.pausedAt) return;
+    const next = { ...draft, pausedAt: null, pausedMs: (draft.pausedMs ?? 0) + Math.max(0, Date.now() - draft.pausedAt) };
+    await repository.saveDraft(next);
+    set({ draft: next });
+  },
   async finishDraft() {
     const draft = get().draft;
     if (!draft) throw new AppError('There is no active trip to save.', 'invalid');
@@ -106,6 +122,7 @@ export const useTripStore = create<TripState>((set, get) => ({
 
 function finalize(draft: TripDraft, endedAt: number, recovered: boolean): Trip {
   const metrics = computeTripMetrics(draft.samples, draft.startedAt, endedAt);
+  const pausedSeconds = ((draft.pausedMs ?? 0) + (draft.pausedAt ? Math.max(0, endedAt - draft.pausedAt) : 0)) / 1000;
   const last = draft.samples[draft.samples.length - 1];
   const planned = draft.plannedGeometry ?? [];
   const routeProgress = last && planned.length >= 2 ? matchToRoute(last, planned).fraction : undefined;
@@ -113,13 +130,13 @@ function finalize(draft: TripDraft, endedAt: number, recovered: boolean): Trip {
     id: draft.id,
     startedAt: draft.startedAt,
     endedAt,
-    durationSeconds: metrics.durationSeconds,
+    durationSeconds: Math.max(0, metrics.durationSeconds - pausedSeconds),
     distanceMeters: metrics.distanceMeters,
     averageSpeedMps: metrics.averageSpeedMps,
     maxSpeedMps: metrics.maxSpeedMps,
     sampleCount: metrics.sampleCount,
     movingTimeSeconds: metrics.movingTimeSeconds,
-    stoppedTimeSeconds: metrics.stoppedTimeSeconds,
+    stoppedTimeSeconds: Math.max(0, metrics.stoppedTimeSeconds - pausedSeconds),
     samples: draft.samples,
     originName: draft.originName,
     destinationName: draft.destinationName,

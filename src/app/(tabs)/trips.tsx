@@ -27,10 +27,15 @@ export default function TripsScreen() {
   const trips = useTripStore((state) => state.trips);
   const ready = useTripStore((state) => state.ready);
   const [filter, setFilter] = useState<(typeof filters)[number]['id']>('week');
+  const [compareIds, setCompareIds] = useState<string[]>([]);
 
   const visible = useMemo(() => trips.filter((trip) => withinFilter(trip.startedAt, filter)), [trips, filter]);
   const distance = visible.reduce((sum, trip) => sum + trip.distanceMeters, 0);
   const duration = visible.reduce((sum, trip) => sum + trip.durationSeconds, 0);
+  const compared = compareIds.flatMap((id) => {
+    const trip = visible.find((item) => item.id === id);
+    return trip ? [trip] : [];
+  });
   const groups = useMemo(() => {
     const map = new Map<string, typeof visible>();
     for (const trip of visible) {
@@ -64,6 +69,20 @@ export default function TripsScreen() {
         <MetricCard compact label="Distance" value={formatDistance(distance, units)} />
         <MetricCard compact label="Travel time" value={formatDuration(duration)} />
       </View>
+      {compared.length === 2 ? (
+        <View style={styles.compare}>
+          <AppText size={16} weight="semibold">
+            {compared[0].destinationName} vs {compared[1].destinationName}
+          </AppText>
+          <AppText size={14} color={theme.colors.mutedForeground}>
+            {`${formatDistance(Math.abs(compared[0].distanceMeters - compared[1].distanceMeters), units)} apart in distance · ${formatDuration(Math.abs(compared[0].durationSeconds - compared[1].durationSeconds))} apart in time`}
+          </AppText>
+        </View>
+      ) : visible.length >= 2 ? (
+        <AppText size={13} color={theme.colors.mutedForeground} style={styles.subtitle}>
+          Open a trip, or tap Select on two trips to compare them.
+        </AppText>
+      ) : null}
       {!ready ? <AppText color={theme.colors.mutedForeground}>Loading trips…</AppText> : null}
       {ready && visible.length === 0 ? (
         <View style={styles.empty}>
@@ -86,6 +105,10 @@ export default function TripsScreen() {
               title={`${trip.originName} → ${trip.destinationName}`}
               detail={`${formatDistance(trip.distanceMeters, units)} · ${formatDuration(trip.durationSeconds)} · ${formatClock(trip.startedAt)}${trip.recovered ? ' · recovered' : ''}`}
               onPress={() => router.push({ pathname: '/trip/[id]', params: { id: trip.id } })}
+              selected={compareIds.includes(trip.id)}
+              onSelect={() =>
+                setCompareIds((current) => (current.includes(trip.id) ? current.filter((id) => id !== trip.id) : [...current, trip.id].slice(-2)))
+              }
             />
           ))}
         </View>
@@ -99,6 +122,7 @@ const styles = StyleSheet.create({
   filters: { marginTop: 20, borderRadius: radius.md, padding: 4, flexDirection: 'row' },
   filter: { flex: 1, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   metrics: { marginTop: 16, flexDirection: 'row', gap: 8 },
+  compare: { marginTop: 16, gap: 6 },
   empty: { marginTop: 28 },
   emptyCopy: { marginTop: 8, lineHeight: 20 },
   group: { marginTop: 22 },

@@ -30,6 +30,7 @@ export async function probeProvider(provider: ProviderSlug, target: { baseUrl: s
     if (provider === 'tomtom') return probeTomTom(target, started);
     if (provider === 'gemini') return probeGemini(target, started);
     if (provider === 'relay') return probeRelay(target, started);
+    if (provider === 'elevenlabs') return probeElevenLabs(target, started);
     if (provider === 'osrm') return probeOsrm(target, started);
     if (provider === 'nominatim') return probeNominatim(target, config.geocodingUserAgent, started);
     return probeMartin(target, started);
@@ -72,6 +73,17 @@ async function probeRelay(target: { baseUrl: string; apiKey: string | null; time
   return done(started, response.ok, response.ok ? 'Relay Models connection successful' : 'Relay Models connection failed');
 }
 
+async function probeElevenLabs(target: { baseUrl: string; apiKey: string | null; timeoutMs: number }, started: number): Promise<ProbeResult> {
+  if (!target.apiKey) return done(started, false, 'ElevenLabs is not configured');
+  const url = new URL('v1/user', ensureSlash(target.baseUrl));
+  const response = await fetch(url.toString(), {
+    signal: AbortSignal.timeout(target.timeoutMs),
+    headers: { Accept: 'application/json', 'xi-api-key': target.apiKey },
+  });
+  await response.arrayBuffer().catch(() => undefined);
+  return done(started, response.ok, response.ok ? 'ElevenLabs connection successful' : 'ElevenLabs connection failed');
+}
+
 async function probeOsrm(target: { baseUrl: string; timeoutMs: number }, started: number): Promise<ProbeResult> {
   const url = new URL(`/nearest/v1/driving/${TEST_LONGITUDE},${TEST_LATITUDE}`, ensureSlash(target.baseUrl));
   const status = await statusOnly(url.toString(), target.timeoutMs);
@@ -112,6 +124,7 @@ function failureMessage(provider: ProviderSlug): string {
     tomtom: 'TomTom connection failed',
     gemini: 'Gemini connection failed',
     relay: 'Relay Models connection failed',
+    elevenlabs: 'ElevenLabs connection failed',
     osrm: 'OSRM connection failed',
     nominatim: 'Nominatim connection failed',
     martin: 'Map tile connection failed',

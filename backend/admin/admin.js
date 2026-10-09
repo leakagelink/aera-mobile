@@ -152,7 +152,7 @@ function providerForm(entry, saved) {
     <label>Default <select name="isDefault"><option value="false">OFF</option><option value="true">ON</option></select></label>
     <label>Base URL <input name="baseUrl" required /></label>
     <label>API key <input name="apiKey" type="password" autocomplete="off" placeholder="Leave empty to keep the current key" /></label>
-    <p class="status">${entry.provider === 'relay' ? 'Paste the Relay Models key from relaymodels.com. Arah calls this API only when Gemini cannot answer. Leave Default off so Gemini stays first.' : 'Paste only the ' + entry.name + ' key. OpenWeather, TomTom, Gemini, and Relay Models each keep a different key.'}</p>
+    <p class="status">${providerHint(entry)}</p>
     <p class="status" data-key></p>
     <label>Model <input name="model" /></label>
     <label>Timeout (ms) <input name="timeoutMs" type="number" min="1000" max="30000" required /></label>
@@ -161,8 +161,8 @@ function providerForm(entry, saved) {
   `;
   form.elements.baseUrl.value = saved?.baseUrl || entry.defaultBaseUrl;
   form.elements.timeoutMs.value = saved?.timeoutMs || 10000;
-  form.elements.model.value = saved?.model || (entry.provider === 'relay' ? 'deepseek-v4-flash' : entry.provider === 'gemini' ? 'gemini-3.5-flash-lite' : '');
-  form.elements.model.placeholder = entry.provider === 'relay' ? 'deepseek-v4-flash' : entry.provider === 'gemini' ? 'gemini-3.5-flash-lite' : '';
+  form.elements.model.value = saved?.model || defaultModel(entry.provider);
+  form.elements.model.placeholder = defaultModel(entry.provider);
   form.elements.enabled.value = String(Boolean(saved?.enabled));
   form.elements.isDefault.value = String(Boolean(saved?.isDefault));
   form.querySelector('[data-key]').textContent = saved?.apiKeyConfigured ? `Current key ••••••••${saved.apiKeyLast4 || ''}` : 'No API key stored.';
@@ -318,6 +318,19 @@ async function renderGoogle() {
   main.append(section);
 }
 
+function providerHint(entry) {
+  if (entry.provider === 'relay') return 'Paste the Relay Models key from relaymodels.com. Arah calls this API only when Gemini cannot answer. Leave Default off so Gemini stays first.';
+  if (entry.provider === 'elevenlabs') return 'Paste the ElevenLabs API key. The model field is the voice ID. Turn Enabled on. Arah uses it when someone talks or plays a reply. Audio is not stored.';
+  return 'Paste only the ' + entry.name + ' key. OpenWeather, TomTom, Gemini, Relay Models, and ElevenLabs each keep a different key.';
+}
+
+function defaultModel(provider) {
+  if (provider === 'relay') return 'deepseek-v4-flash';
+  if (provider === 'gemini') return 'gemini-3.5-flash-lite';
+  if (provider === 'elevenlabs') return 'JBFqnCBsd6RMkjVDRZzb';
+  return '';
+}
+
 function field(label, name, value, placeholder) {
   const wrap = document.createElement('label');
   wrap.append(document.createTextNode(label));
@@ -340,8 +353,16 @@ async function renderSettings() {
     <p>OpenWeather environment fallback: ${settings.openWeatherEnvConfigured ? 'set' : 'not set'}</p>
     <p>Gemini environment fallback: ${settings.geminiEnvConfigured ? 'set' : 'not set'}</p>
     <p>TomTom environment fallback: ${settings.tomtomEnvConfigured ? 'set' : 'not set'}</p>
-    <p>Weather cache TTL: ${settings.weatherCacheTtlSeconds} seconds</p>`;
+    <p>Weather cache TTL: ${settings.weatherCacheTtlSeconds} seconds</p>
+    <p data-metrics>Assistant and voice counts are loading.</p>`;
   main.append(section);
+  void api('/api/v1/admin/metrics')
+    .then((metrics) => {
+      const line = section.querySelector('[data-metrics]');
+      if (!line) return;
+      line.textContent = `Assistant replies ${metrics.assistantReplies}. Assistant failures ${metrics.assistantFailures}. Voice replies ${metrics.voiceReplies}. Voice failures ${metrics.voiceFailures}. These are totals, not crash reports, and they do not include message text.`;
+    })
+    .catch(() => undefined);
 
   const account = document.createElement('section');
   account.className = 'card';

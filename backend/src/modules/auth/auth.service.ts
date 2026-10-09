@@ -6,6 +6,7 @@ import { RedisService } from '../../cache/redis.service';
 import { APP_CONFIG } from '../../config/config.module';
 import type { AppConfig } from '../../config/load-config';
 import { DatabaseService } from '../../database/database.service';
+import { aiMemoryKey } from '../ai/memory';
 import { readGoogleIdToken } from '../../security/google-id-token';
 import { signUserToken } from '../../security/user-token';
 
@@ -98,6 +99,7 @@ export class AuthService {
 
   private async removeAccount(userId: string): Promise<boolean> {
     const result = await this.database.query('DELETE FROM users WHERE id = $1 AND is_development = false', [userId]);
+    await this.redis.delete(aiMemoryKey(userId));
     return result.rowCount === 1;
   }
 

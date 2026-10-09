@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req } from '@nestjs/common';
 
+import { RedisService } from '../../cache/redis.service';
 import { Admin } from './admin.decorator';
 import { AdminProviderService } from './admin-provider.service';
 import { GoogleIntegrationService } from './google-integration.service';
@@ -12,6 +13,7 @@ export class AdminApiController {
   constructor(
     private readonly admin: AdminProviderService,
     private readonly google: GoogleIntegrationService,
+    private readonly redis: RedisService,
   ) {}
 
   @Get('providers/catalog')
@@ -62,6 +64,17 @@ export class AdminApiController {
   @Get('settings')
   settings() {
     return this.admin.settings();
+  }
+
+  @Get('metrics')
+  async metrics() {
+    const [assistantReplies, assistantFailures, voiceReplies, voiceFailures] = await Promise.all([
+      this.redis.readCount('aera:metrics:ai:ok'),
+      this.redis.readCount('aera:metrics:ai:error'),
+      this.redis.readCount('aera:metrics:voice:ok'),
+      this.redis.readCount('aera:metrics:voice:error'),
+    ]);
+    return { assistantReplies, assistantFailures, voiceReplies, voiceFailures };
   }
 
   @Get('google')

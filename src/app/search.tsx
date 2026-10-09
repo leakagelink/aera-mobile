@@ -91,7 +91,21 @@ export default function SearchScreen() {
         ) : null}
         {showResults && search.data
           ? search.data.map((place) => (
-              <PlaceRow key={place.id} place={place} icon="place" distance={distanceLabel(location, place, units)} onPress={() => void select(place)} />
+              <PlaceRow
+                key={place.id}
+                place={place}
+                icon="place"
+                distance={distanceLabel(location, place, units)}
+                onPress={() => void select(place)}
+                onSave={() =>
+                  usePreferencesStore.getState().addFavorite({
+                    name: place.name,
+                    address: place.address,
+                    latitude: place.latitude,
+                    longitude: place.longitude,
+                  })
+                }
+              />
             ))
           : null}
       </ScrollView>
@@ -125,11 +139,13 @@ function PlaceRow({
   distance,
   icon,
   onPress,
+  onSave,
 }: {
   place: Place;
   distance: string;
   icon: 'recent' | 'place';
   onPress: () => void;
+  onSave?: () => void;
 }) {
   const theme = useTheme();
   const Icon = icon === 'recent' ? History : MapPin;
@@ -150,6 +166,13 @@ function PlaceRow({
         <AppText size={12} color={theme.colors.mutedForeground}>
           {distance}
         </AppText>
+      ) : null}
+      {onSave ? (
+        <Pressable accessibilityRole="button" accessibilityLabel={`Save ${place.name}`} onPress={onSave} hitSlop={8}>
+          <AppText size={12} weight="semibold" color={theme.colors.primary}>
+            Save
+          </AppText>
+        </Pressable>
       ) : null}
     </Pressable>
   );

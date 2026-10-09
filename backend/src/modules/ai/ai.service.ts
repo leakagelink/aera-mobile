@@ -6,6 +6,8 @@ import type { AppConfig } from '../../config/load-config';
 import { GeminiProvider, aiError, type GeminiContent, type GeminiFunctionCall, type GeminiTurn } from '../../providers/gemini.provider';
 import { RelayProvider, isRelayFallbackError } from '../../providers/relay.provider';
 import { ProviderConfigService } from '../provider-config/provider-config.service';
+import { cardsFromToolResult, type AiCard } from './ai-cards';
+import { aiMemoryKey, appendMemory, parseMemory, type StoredTurn } from './memory';
 import { ArahToolRegistry, type AiClientContext, type ToolActivity } from './tool-registry';
 
 const SYSTEM = [
@@ -43,7 +45,7 @@ export class AiService {
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
-  async chat(userId: string, input: { message: string; history?: { role: 'user' | 'assistant'; text: string }[]; context?: AiClientContext; language?: string }) {
+  async chat(userId: string, input: { message: string; history?: { role: 'user' | 'assistant'; text: string }[]; context?: AiClientContext; language?: string; remember?: boolean }) {
     const message = input.message.trim();
     if (!message || message.length > this.config.aiMaxMessageChars) {
       throw aiError('AI_MESSAGE_TOO_LARGE', 'That message is too long.', 400);
@@ -59,6 +61,7 @@ export class AiService {
     const contents = this.contents(input.history ?? [], message);
     const declarations = this.tools.declarations();
     const toolCalls: ToolActivity[] = [];
+    const cards: AiCard[] = [];
     const counts = new Map<string, number>();
     let rejected = 0;
     let useRelay = !geminiConfig;
@@ -84,7 +87,9 @@ export class AiService {
         turn = await speak('relay');
       }
       if (turn.functionCalls.length === 0) {
-        return { message: turn.text ?? 'I could not answer that from the available Arah data.', toolCalls };
+        const messageText = turn.text ?? 'I could not answer that from the available Arah data.';
+        await this.finish(userId, input, messageText, true);
+        return { message: messageText, toolCalls, cards };
       }
       const calls = turn.functionCalls.slice(0, 3);
       const responses: Record<string, unknown>[] = [];
@@ -92,13 +97,18 @@ export class AiService {
         const seen = (counts.get(call.name) ?? 0) + 1;
         counts.set(call.name, seen);
         if (seen > 3) {
-          return { message: 'I stopped before repeating the same lookup.', toolCalls };
+          const repeated = 'I stopped before repeating the same lookup.';
+          await this.finish(userId, input, repeated, false);
+          return { message: repeated, toolCalls, cards };
         }
         const executed = await this.tools.execute(call.name, call.args, { userId, ...input.context });
         toolCalls.push(executed.activity);
+        cards.push(...cardsFromToolResult(executed.result));
         if (executed.activity.status === 'rejected') rejected += 1;
         if (rejected >= 2) {
-          return { message: 'I could not complete that request with the available Arah tools.', toolCalls };
+          const rejectedMessage = 'I could not complete that request with the available Arah tools.';
+          await this.finish(userId, input, rejectedMessage, false);
+          return { message: rejectedMessage, toolCalls, cards };
         }
         responses.push({
           functionResponse: {
@@ -114,7 +124,29 @@ export class AiService {
         parts: responses,
       });
     }
-    return { message: 'I could not finish that request within the lookup limit.', toolCalls };
+    const unfinished = 'I could not finish that request within the lookup limit.';
+    await this.finish(userId, input, unfinished, false);
+    return { message: unfinished, toolCalls, cards };
+  }
+
+  async memory(userId: string): Promise<{ messages: StoredTurn[] }> {
+    return { messages: parseMemory(await this.redis.get(aiMemoryKey(userId))) };
+  }
+
+  async clearMemory(userId: string): Promise<{ deleted: true }> {
+    await this.redis.delete(aiMemoryKey(userId));
+    return { deleted: true };
+  }
+
+  private async finish(userId: string, input: { message: string; remember?: boolean }, answer: string, success: boolean) {
+    await this.redis.addCount(success ? 'aera:metrics:ai:ok' : 'aera:metrics:ai:error');
+    if (!input.remember) return;
+    const current = parseMemory(await this.redis.get(aiMemoryKey(userId)));
+    const next = appendMemory(current, [
+      { role: 'user', text: input.message },
+      { role: 'assistant', text: answer },
+    ]);
+    await this.redis.set(aiMemoryKey(userId), JSON.stringify(next), 60 * 60 * 24 * 30);
   }
 
   private system(language?: string): string {

@@ -36,6 +36,13 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Arah uses the microphone when you tap Talk to speak to the assistant.",
+          "recordAudioAndroid": true
+        }
+      ],
       "expo-router",
       "expo-font",
       "expo-dev-client",

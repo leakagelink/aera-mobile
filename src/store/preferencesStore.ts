@@ -20,6 +20,8 @@ type PreferencesState = {
   assistantLanguage: AssistantLanguage;
   home: SavedShortcut | null;
   work: SavedShortcut | null;
+  favorites: SavedShortcut[];
+  rememberChats: boolean;
   onboardingComplete: boolean;
   locationPromptSeen: boolean;
   hydrated: boolean;
@@ -28,6 +30,9 @@ type PreferencesState = {
   setAssistantLanguage: (language: AssistantLanguage) => void;
   setHome: (place: SavedShortcut | null) => void;
   setWork: (place: SavedShortcut | null) => void;
+  addFavorite: (place: SavedShortcut) => void;
+  removeFavorite: (place: SavedShortcut) => void;
+  setRememberChats: (remember: boolean) => void;
   completeOnboarding: () => void;
   markLocationPromptSeen: () => void;
 };
@@ -40,6 +45,8 @@ export const usePreferencesStore = create<PreferencesState>()(
       assistantLanguage: 'auto',
       home: null,
       work: null,
+      favorites: [],
+      rememberChats: false,
       onboardingComplete: false,
       locationPromptSeen: false,
       hydrated: false,
@@ -48,6 +55,17 @@ export const usePreferencesStore = create<PreferencesState>()(
       setAssistantLanguage: (assistantLanguage) => set({ assistantLanguage }),
       setHome: (home) => set({ home }),
       setWork: (work) => set({ work }),
+      addFavorite: (place) =>
+        set((state) => {
+          const duplicate = state.favorites.some((item) => Math.abs(item.latitude - place.latitude) < 0.0001 && Math.abs(item.longitude - place.longitude) < 0.0001);
+          if (duplicate) return state;
+          return { favorites: [place, ...state.favorites].slice(0, 20) };
+        }),
+      removeFavorite: (place) =>
+        set((state) => ({
+          favorites: state.favorites.filter((item) => Math.abs(item.latitude - place.latitude) >= 0.0001 || Math.abs(item.longitude - place.longitude) >= 0.0001),
+        })),
+      setRememberChats: (rememberChats) => set({ rememberChats }),
       completeOnboarding: () => set({ onboardingComplete: true }),
       markLocationPromptSeen: () => set({ locationPromptSeen: true }),
     }),
@@ -60,6 +78,8 @@ export const usePreferencesStore = create<PreferencesState>()(
         assistantLanguage: state.assistantLanguage,
         home: state.home,
         work: state.work,
+        favorites: state.favorites,
+        rememberChats: state.rememberChats,
         onboardingComplete: state.onboardingComplete,
         locationPromptSeen: state.locationPromptSeen,
       }),

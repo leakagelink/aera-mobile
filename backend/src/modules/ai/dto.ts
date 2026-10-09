@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, IsArray, IsIn, IsNumber, IsOptional, IsString, Max, MaxLength, Min, MinLength, ValidateIf, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsNumber, IsOptional, IsString, Max, MaxLength, Min, MinLength, ValidateIf, ValidateNested } from 'class-validator';
 
 class AiLocationDto {
   @IsNumber()
@@ -150,4 +150,27 @@ export class ChatDto {
   @IsOptional()
   @IsIn(['en', 'hi', 'mr', 'ta', 'te', 'bn', 'gu', 'kn', 'ml', 'pa', 'ur'])
   language?: 'en' | 'hi' | 'mr' | 'ta' | 'te' | 'bn' | 'gu' | 'kn' | 'ml' | 'pa' | 'ur';
+
+  @IsOptional()
+  @IsBoolean()
+  remember?: boolean;
+}
+
+export class SpeakDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(600)
+  text!: string;
+}
+
+export class TranscribeDto {
+  @IsString()
+  @MinLength(16)
+  @MaxLength(2_200_000)
+  audioBase64!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  mimeType?: string;
 }

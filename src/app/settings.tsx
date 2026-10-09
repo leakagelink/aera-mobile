@@ -3,6 +3,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { clearAiMemory } from '@/services/ai/chat';
 import { registerArahNotifications } from '@/services/notifications/register';
 import { geocodingProvider } from '@/services/providers';
 import { useLocationStore } from '@/store/locationStore';
@@ -53,6 +54,10 @@ export default function SettingsScreen() {
   const setAssistantLanguage = usePreferencesStore((state) => state.setAssistantLanguage);
   const setHome = usePreferencesStore((state) => state.setHome);
   const setWork = usePreferencesStore((state) => state.setWork);
+  const favorites = usePreferencesStore((state) => state.favorites);
+  const removeFavorite = usePreferencesStore((state) => state.removeFavorite);
+  const rememberChats = usePreferencesStore((state) => state.rememberChats);
+  const setRememberChats = usePreferencesStore((state) => state.setRememberChats);
   const clearHistory = useTripStore((state) => state.clearHistory);
   const signedIn = useAccountStore((state) => state.token);
 
@@ -125,6 +130,38 @@ export default function SettingsScreen() {
         </AppText>
         <ShortcutRow label="Home" place={home} onSave={() => void saveShortcut('home')} onClear={() => setHome(null)} />
         <ShortcutRow label="Work" place={work} onSave={() => void saveShortcut('work')} onClear={() => setWork(null)} />
+        {favorites.map((place) => (
+          <Pressable
+            key={`${place.latitude},${place.longitude}`}
+            accessibilityRole="button"
+            onPress={() => removeFavorite(place)}
+            style={[styles.link, { backgroundColor: theme.colors.surface }]}
+          >
+            <AppText size={15} weight="medium">
+              {place.name}
+            </AppText>
+            <AppText size={13} color={theme.colors.mutedForeground}>
+              Saved place. Tap to remove.
+            </AppText>
+          </Pressable>
+        ))}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ selected: rememberChats }}
+          onPress={() => {
+            const next = !rememberChats;
+            setRememberChats(next);
+            if (!next) void clearAiMemory().catch(() => undefined);
+          }}
+          style={[styles.link, { backgroundColor: theme.colors.surface }]}
+        >
+          <AppText size={15} weight="medium">
+            {rememberChats ? 'Saved chats are on' : 'Saved chats are off'}
+          </AppText>
+          <AppText size={13} color={theme.colors.mutedForeground}>
+            Recent assistant text stays on the server until you turn this off or delete the account.
+          </AppText>
+        </Pressable>
         <AppText size={11} weight="bold" color={theme.colors.mutedForeground} style={styles.label}>
           Privacy
         </AppText>

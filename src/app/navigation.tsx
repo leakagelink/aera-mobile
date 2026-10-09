@@ -47,6 +47,7 @@ export default function NavigationScreen() {
   const destination = useSessionStore((state) => state.destination);
   const route = useSessionStore((state) => selectedRoute(state));
   const draft = useTripStore((state) => state.draft);
+  const paused = Boolean(draft?.pausedAt);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -65,7 +66,7 @@ export default function NavigationScreen() {
 
   const offRoute = snapshot?.offRoute ?? false;
   useEffect(() => {
-    if (!location || !destination) return;
+    if (!location || !destination || paused) return;
     const decision = rerouteDecision({
       offRoute,
       accuracy: location.accuracy,
@@ -94,7 +95,7 @@ export default function NavigationScreen() {
       .catch(() => {
         if (lastReroute.current === request) setRouteNote('The route could not be recalculated. Check the connection.');
       });
-  }, [offRoute, location, destination, now]);
+  }, [offRoute, location, destination, now, paused]);
 
   useEffect(() => {
     if (!follow || !location) return;
@@ -198,6 +199,15 @@ export default function NavigationScreen() {
           </View>
           <View style={[styles.footer, { borderTopColor: theme.colors.border }]}>
             <LocationStatus recording />
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => void (paused ? useTripStore.getState().resumeDraft() : useTripStore.getState().pauseDraft())}
+              style={[styles.end, { backgroundColor: theme.colors.secondary }]}
+            >
+              <AppText size={14} weight="semibold">
+                {paused ? 'Resume' : 'Pause'}
+              </AppText>
+            </Pressable>
             <Pressable accessibilityRole="button" onPress={confirmEnd} style={[styles.end, { backgroundColor: `${theme.colors.error}1F` }]}>
               <Square color={theme.colors.error} size={12} fill={theme.colors.error} />
               <AppText size={14} weight="semibold" color={theme.colors.error}>
