@@ -35,6 +35,12 @@ export type AiClientContext = {
     address?: string | null;
     kind?: 'home' | 'work' | 'favorite';
   }[];
+  usualTrips?: {
+    from: string;
+    to: string;
+    trips: number;
+    fastestSeconds: number;
+  }[];
 };
 
 export type ToolStatus = 'ok' | 'unavailable' | 'rejected';
@@ -185,6 +191,11 @@ export class ArahToolRegistry {
         const latest = trips[0] ?? null;
         if (!latest) return unavailable('TRIP_UNAVAILABLE');
         return summarizeTrip(latest);
+      }),
+      tool('getUsualTrips', 'Read repeated trips saved on this phone, including the fastest time the user has taken. Do not invent a habit or a time.', 'Reading your usual trips...', emptySchema(), async (_args, context) => {
+        const trips = context.usualTrips ?? [];
+        if (trips.length === 0) return unavailable('TRIP_UNAVAILABLE');
+        return { trips };
       }),
       tool('getTripHistory', 'Read summarized stored trips for the signed-in user.', 'Reading your trips...', { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 20 } } }, async (args, context) => {
         const limit = typeof args.limit === 'number' ? Math.round(args.limit) : 10;

@@ -1,5 +1,6 @@
 import { aeraApiRequest } from '@/services/api/client';
 import { navigationSnapshot } from '@/features/navigation/progress';
+import { useHabitStore } from '@/store/habitStore';
 import { useLocationStore } from '@/store/locationStore';
 import { usePreferencesStore } from '@/store/preferencesStore';
 import { selectedRoute, useSessionStore } from '@/store/sessionStore';
@@ -28,6 +29,7 @@ export type AiChatResult = {
 };
 
 export async function sendAiChat(message: string, history: AiChatTurn[]): Promise<AiChatResult> {
+  await useHabitStore.getState().hydrate();
   const payload = await aeraApiRequest('/api/v1/ai/chat', {
     method: 'POST',
     timeoutMs: 45_000,
@@ -134,6 +136,7 @@ function currentAiContext() {
     navigation?: { remainingMeters: number; remainingSeconds: number; eta: number };
     destination?: { latitude: number; longitude: number; name: string };
     savedPlaces?: { name: string; latitude: number; longitude: number; address: string | null; kind: 'home' | 'work' | 'favorite' }[];
+    usualTrips?: { from: string; to: string; trips: number; fastestSeconds: number }[];
   } = {};
   if (location) {
     context.location = {
@@ -163,5 +166,15 @@ function currentAiContext() {
     ...preferences.favorites.slice(0, 6).map((place) => ({ ...place, kind: 'favorite' as const })),
   ].filter((place): place is NonNullable<typeof place> => place !== null);
   if (savedPlaces.length > 0) context.savedPlaces = savedPlaces;
+  const habits = useHabitStore.getState();
+  const usualTrips = habits.legs
+    .filter((leg) => leg.trips >= 2)
+    .slice(0, 4)
+    .flatMap((leg) => {
+      const from = habits.places.find((place) => place.id === leg.fromId);
+      const to = habits.places.find((place) => place.id === leg.toId);
+      return from && to ? [{ from: from.name, to: to.name, trips: leg.trips, fastestSeconds: Math.round(leg.fastestSeconds) }] : [];
+    });
+  if (usualTrips.length > 0) context.usualTrips = usualTrips;
   return context;
 }

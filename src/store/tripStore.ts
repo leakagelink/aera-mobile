@@ -27,6 +27,8 @@ type TripState = {
   pauseDraft: () => Promise<void>;
   resumeDraft: () => Promise<void>;
   finishDraft: () => Promise<Trip>;
+  renameDraft: (originName: string, destinationName: string) => Promise<void>;
+  abandonDraft: () => Promise<void>;
   clearHistory: () => Promise<void>;
 };
 
@@ -112,6 +114,20 @@ export const useTripStore = create<TripState>((set, get) => ({
     await repository.clearDraft();
     set({ draft: null, trips });
     return trip;
+  },
+  async renameDraft(originName, destinationName) {
+    const draft = get().draft;
+    if (!draft || draft.plannedGeometry) return;
+    const next = { ...draft, originName, destinationName };
+    await repository.saveDraft(next);
+    set({ draft: next });
+  },
+  async abandonDraft() {
+    const draft = get().draft;
+    if (!draft || draft.plannedGeometry) return;
+    if (saveTimer) clearTimeout(saveTimer);
+    await repository.clearDraft();
+    set({ draft: null });
   },
   async clearHistory() {
     if (saveTimer) clearTimeout(saveTimer);

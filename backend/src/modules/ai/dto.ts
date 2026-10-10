@@ -96,6 +96,28 @@ class AiSavedPlaceDto {
   kind?: 'home' | 'work' | 'favorite';
 }
 
+class AiUsualTripDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(160)
+  from!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(160)
+  to!: string;
+
+  @IsNumber()
+  @Min(2)
+  @Max(1000)
+  trips!: number;
+
+  @IsNumber()
+  @Min(1)
+  @Max(86_400)
+  fastestSeconds!: number;
+}
+
 class AiContextDto {
   @IsOptional()
   @ValidateNested()
@@ -118,6 +140,13 @@ class AiContextDto {
   @ValidateNested({ each: true })
   @Type(() => AiSavedPlaceDto)
   savedPlaces?: AiSavedPlaceDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(4)
+  @ValidateNested({ each: true })
+  @Type(() => AiUsualTripDto)
+  usualTrips?: AiUsualTripDto[];
 }
 
 class AiHistoryDto {

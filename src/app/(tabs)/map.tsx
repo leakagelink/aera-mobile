@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { UsualRouteCard } from '@/components/trips/UsualRouteCard';
 import { HomeVoice } from '@/components/assistant/HomeVoice';
 import { AeraMap, type AeraMapHandle } from '@/components/map/AeraMap';
 import { JourneyFields } from '@/components/routing/JourneyFields';
 import { AppText } from '@/components/ui/AppText';
 import { IconButton } from '@/components/ui/Buttons';
 import { LocationStatus } from '@/components/ui/LocationStatus';
+import { useAutoTrip } from '@/features/trips/useAutoTrip';
 import { useForegroundLocation } from '@/features/location/useForegroundLocation';
 import { useAroundYou } from '@/features/map/useAroundYou';
 import { useNearbyCategory } from '@/features/map/useNearbyCategory';
@@ -33,6 +35,7 @@ const suggestions = [
 export default function MapScreen() {
   const focused = useIsFocused();
   useForegroundLocation(focused, 'browse');
+  useAutoTrip(focused);
   const router = useRouter();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -70,6 +73,7 @@ export default function MapScreen() {
         onUserGesture={() => setFollow(false)}
       />
       <View style={[styles.top, { top: insets.top + 8 }]}>
+        <UsualRouteCard location={location} />
         <JourneyFields />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           {suggestions.map((item) => {
