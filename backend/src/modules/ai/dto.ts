@@ -15,21 +15,16 @@ class AiLocationDto {
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
   @IsNumber()
-  @Min(0)
   accuracy?: number | null;
 
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
   @IsNumber()
-  @Min(0)
-  @Max(360)
   heading?: number | null;
 
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
   @IsNumber()
-  @Min(0)
-  @Max(200)
   speed?: number | null;
 
   @IsOptional()
@@ -65,14 +60,14 @@ class AiDestinationDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(160)
+  @MaxLength(500)
   name?: string;
 }
 
 class AiSavedPlaceDto {
   @IsString()
   @MinLength(1)
-  @MaxLength(160)
+  @MaxLength(500)
   name!: string;
 
   @IsNumber()
@@ -88,7 +83,7 @@ class AiSavedPlaceDto {
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
   @IsString()
-  @MaxLength(240)
+  @MaxLength(2000)
   address?: string | null;
 
   @IsOptional()
@@ -99,12 +94,12 @@ class AiSavedPlaceDto {
 class AiUsualTripDto {
   @IsString()
   @MinLength(1)
-  @MaxLength(160)
+  @MaxLength(500)
   from!: string;
 
   @IsString()
   @MinLength(1)
-  @MaxLength(160)
+  @MaxLength(500)
   to!: string;
 
   @IsNumber()
@@ -114,7 +109,7 @@ class AiUsualTripDto {
 
   @IsNumber()
   @Min(1)
-  @Max(86_400)
+  @Max(604_800)
   fastestSeconds!: number;
 }
 

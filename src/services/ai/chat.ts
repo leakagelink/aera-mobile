@@ -30,6 +30,15 @@ export type AiChatResult = {
 
 export async function sendAiChat(message: string, history: AiChatTurn[]): Promise<AiChatResult> {
   await useHabitStore.getState().hydrate();
+  try {
+    return await postAiChat(message, history);
+  } catch (error) {
+    if (!retryableAiError(error)) throw error;
+    return await postAiChat(message, history);
+  }
+}
+
+async function postAiChat(message: string, history: AiChatTurn[]): Promise<AiChatResult> {
   const payload = await aeraApiRequest('/api/v1/ai/chat', {
     method: 'POST',
     timeoutMs: 45_000,
@@ -59,6 +68,11 @@ export async function sendAiChat(message: string, history: AiChatTurn[]): Promis
     throw new Error('The assistant returned an empty response.');
   }
   return { message: body.message, toolCalls, cards: readCards(body as { cards?: unknown }) };
+}
+
+function retryableAiError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : '';
+  return /unavailable|busy|timed out|Network unavailable|took too long|could not answer/i.test(message);
 }
 
 export async function loadAiMemory(): Promise<AiChatTurn[]> {
@@ -142,9 +156,9 @@ function currentAiContext() {
     context.location = {
       latitude: location.latitude,
       longitude: location.longitude,
-      accuracy: location.accuracy,
-      heading: location.heading !== null && location.heading >= 0 && location.heading <= 360 ? location.heading : null,
-      speed: location.speed !== null && location.speed >= 0 ? location.speed : null,
+      accuracy: bounded(location.accuracy, 0, 100_000),
+      heading: bounded(location.heading, 0, 360),
+      speed: bounded(location.speed, 0, 200),
       timestamp: new Date(location.timestamp).toISOString(),
     };
     if (route) {
@@ -157,14 +171,15 @@ function currentAiContext() {
     }
   }
   if (destination) {
-    context.destination = { latitude: destination.latitude, longitude: destination.longitude, name: destination.name };
+    context.destination = { latitude: destination.latitude, longitude: destination.longitude, name: destination.name.slice(0, 500) };
   }
   const preferences = usePreferencesStore.getState();
   const savedPlaces = [
     preferences.home ? { ...preferences.home, kind: 'home' as const } : null,
     preferences.work ? { ...preferences.work, kind: 'work' as const } : null,
     ...preferences.favorites.slice(0, 6).map((place) => ({ ...place, kind: 'favorite' as const })),
-  ].filter((place): place is NonNullable<typeof place> => place !== null);
+  ].filter((place): place is NonNullable<typeof place> => place !== null && place.name.trim().length > 0)
+    .map((place) => ({ ...place, name: place.name.trim().slice(0, 500), address: place.address ? place.address.slice(0, 2000) : null }));
   if (savedPlaces.length > 0) context.savedPlaces = savedPlaces;
   const habits = useHabitStore.getState();
   const usualTrips = habits.legs
@@ -173,8 +188,13 @@ function currentAiContext() {
     .flatMap((leg) => {
       const from = habits.places.find((place) => place.id === leg.fromId);
       const to = habits.places.find((place) => place.id === leg.toId);
-      return from && to ? [{ from: from.name, to: to.name, trips: leg.trips, fastestSeconds: Math.round(leg.fastestSeconds) }] : [];
+      return from && to ? [{ from: from.name.slice(0, 500), to: to.name.slice(0, 500), trips: Math.min(1000, leg.trips), fastestSeconds: Math.min(604_800, Math.max(1, Math.round(leg.fastestSeconds))) }] : [];
     });
   if (usualTrips.length > 0) context.usualTrips = usualTrips;
   return context;
+}
+
+function bounded(value: number | null, min: number, max: number): number | null {
+  if (value === null || !Number.isFinite(value) || value < min || value > max) return null;
+  return value;
 }

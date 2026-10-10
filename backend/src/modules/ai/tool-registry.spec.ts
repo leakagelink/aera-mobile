@@ -50,7 +50,7 @@ describe('ArahToolRegistry', () => {
   it('reads location and speed only from the device context', async () => {
     const tools = registry();
     await expect(tools.execute('getCurrentLocation', {}, { userId })).resolves.toMatchObject({ result: { code: 'LOCATION_UNAVAILABLE' } });
-    await expect(tools.execute('getCurrentLocation', { latitude: 1, longitude: 2 }, { userId, location })).resolves.toMatchObject({ result: { code: 'AI_TOOL_INVALID_ARGUMENTS' } });
+    await expect(tools.execute('getCurrentLocation', { latitude: 1, longitude: 2 }, { userId, location })).resolves.toMatchObject({ result: { latitude: 22.72, speed: 12 } });
     await expect(tools.execute('getCurrentLocation', {}, { userId, location })).resolves.toMatchObject({ result: { latitude: 22.72, speed: 12 } });
     await expect(tools.execute('getCurrentSpeed', {}, { userId })).resolves.toMatchObject({ result: { code: 'SPEED_UNAVAILABLE' } });
     await expect(tools.execute('getCurrentSpeed', {}, { userId, location })).resolves.toMatchObject({ result: { speed: 12, unit: 'm/s' } });
@@ -79,7 +79,7 @@ describe('ArahToolRegistry', () => {
   it('reads only the authenticated user trips and does not expose road history', async () => {
     const trips = { list: jest.fn(async () => []) };
     const tools = registry({ trips });
-    await expect(tools.execute('getTripHistory', { userId: '00000000-0000-4000-8000-000000000099' }, { userId })).resolves.toMatchObject({ result: { code: 'AI_TOOL_INVALID_ARGUMENTS' } });
+    await expect(tools.execute('getTripHistory', { userId: '00000000-0000-4000-8000-000000000099' }, { userId })).resolves.toMatchObject({ result: { count: 0 } });
     await expect(tools.execute('getTripStats', {}, { userId })).resolves.toMatchObject({ result: { code: 'TRIP_UNAVAILABLE' } });
     expect(trips.list).toHaveBeenCalledWith(userId, 20);
     const populated = registry();

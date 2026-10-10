@@ -16,7 +16,7 @@ const SYSTEM = [
   'Style example only, not facts: if the user says "bhai mujhe yaha se mere ghar ke liye sabse acha or aasan rasta bata", a matching reply sounds like "dekh bhai, tujhe is raste se jana chahiye." The route and traffic in the reply must come from tools.',
   'For a route, home, an easy path, less traffic, or reaching faster, call getSavedPlaces, getUsualTrips, calculateRoute or getAlternativeRoutes, and getTraffic. Then say that result in their style. A usual trip time is the fastest time already saved on the phone. A live route time comes from calculateRoute. Keep place names exactly as the tools return them. Two or three short sentences.',
   'Say the road is clear only when getTraffic shows free-flowing traffic. If traffic is unavailable, say that in their style. Never invent a route, a home, or traffic.',
-  'If a tool result contains a code, say that information is unavailable, in their style.',
+  'If a tool result contains a code, retry that lookup once with simpler arguments. Then say the information is unavailable, in their style. Never repeat a tool code or the word invalid.',
   'Do not mention providers, API keys, SQL, or internal errors.',
   'Routing cannot avoid tolls or highways. If a result says not_supported, say those constraints were not applied, in their style.',
 ].join(' ');
@@ -59,6 +59,7 @@ export class AiService {
     const relayConfig = relay?.enabled && relay.apiKey ? relay : null;
     if (!geminiConfig && !relayConfig) throw aiError('GEMINI_NOT_CONFIGURED', 'The assistant is not configured.', 503);
 
+    const context = normalizeClientContext(input.context);
     const contents = this.contents(input.history ?? [], message);
     const declarations = this.tools.declarations();
     const toolCalls: ToolActivity[] = [];
@@ -102,7 +103,7 @@ export class AiService {
           await this.finish(userId, input, repeated, false);
           return { message: repeated, toolCalls, cards };
         }
-        const executed = await this.tools.execute(call.name, call.args, { userId, ...input.context });
+        const executed = await this.tools.execute(call.name, call.args, { userId, ...context });
         toolCalls.push(executed.activity);
         cards.push(...cardsFromToolResult(executed.result));
         if (executed.activity.status === 'rejected') rejected += 1;
@@ -115,7 +116,7 @@ export class AiService {
           functionResponse: {
             name: call.name,
             ...(call.id ? { id: call.id } : {}),
-            response: executed.result,
+            response: toolResponseBody(executed.result),
           },
         });
       }
@@ -166,6 +167,75 @@ export class AiService {
       });
     return [...prior, { role: 'user', parts: [{ text: message }] }];
   }
+}
+
+function toolResponseBody(result: unknown): Record<string, unknown> {
+  if (Array.isArray(result)) return { items: result };
+  if (result && typeof result === 'object') return result as Record<string, unknown>;
+  return { value: result ?? null };
+}
+
+function normalizeClientContext(context?: AiClientContext): AiClientContext | undefined {
+  if (!context) return undefined;
+  const next: AiClientContext = {};
+  const latitude = bounded(context.location?.latitude, -90, 90);
+  const longitude = bounded(context.location?.longitude, -180, 180);
+  if (context.location && latitude !== null && longitude !== null) {
+    next.location = {
+      latitude,
+      longitude,
+      accuracy: bounded(context.location.accuracy, 0, 100_000),
+      heading: bounded(context.location.heading, 0, 360),
+      speed: bounded(context.location.speed, 0, 200),
+      timestamp: typeof context.location.timestamp === 'string' ? context.location.timestamp.slice(0, 40) : null,
+    };
+  }
+  if (context.navigation) {
+    const remainingMeters = bounded(context.navigation.remainingMeters, 0, 10_000_000);
+    const remainingSeconds = bounded(context.navigation.remainingSeconds, 0, 604_800);
+    const eta = bounded(context.navigation.eta, 0, 10_000_000_000_000);
+    if (remainingMeters !== null && remainingSeconds !== null && eta !== null) {
+      next.navigation = { remainingMeters, remainingSeconds, eta };
+    }
+  }
+  const destinationLatitude = bounded(context.destination?.latitude, -90, 90);
+  const destinationLongitude = bounded(context.destination?.longitude, -180, 180);
+  if (destinationLatitude !== null && destinationLongitude !== null) {
+    next.destination = {
+      latitude: destinationLatitude,
+      longitude: destinationLongitude,
+      ...(typeof context.destination?.name === 'string' && context.destination.name.trim() ? { name: context.destination.name.trim().slice(0, 500) } : {}),
+    };
+  }
+  const savedPlaces = (context.savedPlaces ?? []).flatMap((place) => {
+    const placeLatitude = bounded(place.latitude, -90, 90);
+    const placeLongitude = bounded(place.longitude, -180, 180);
+    const name = place.name.trim().slice(0, 500);
+    if (placeLatitude === null || placeLongitude === null || !name) return [];
+    return [{
+      name,
+      latitude: placeLatitude,
+      longitude: placeLongitude,
+      address: typeof place.address === 'string' ? place.address.slice(0, 2000) : null,
+      ...(place.kind ? { kind: place.kind } : {}),
+    }];
+  });
+  if (savedPlaces.length > 0) next.savedPlaces = savedPlaces.slice(0, 8);
+  const usualTrips = (context.usualTrips ?? []).flatMap((trip) => {
+    const from = trip.from.trim().slice(0, 500);
+    const to = trip.to.trim().slice(0, 500);
+    const trips = bounded(trip.trips, 2, 1000);
+    const fastestSeconds = bounded(trip.fastestSeconds, 1, 604_800);
+    if (!from || !to || trips === null || fastestSeconds === null) return [];
+    return [{ from, to, trips, fastestSeconds }];
+  });
+  if (usualTrips.length > 0) next.usualTrips = usualTrips.slice(0, 4);
+  return next;
+}
+
+function bounded(value: unknown, min: number, max: number): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) return null;
+  return value;
 }
 
 function modelPartsFor(turn: GeminiTurn, calls: GeminiFunctionCall[]): Record<string, unknown>[] {

@@ -81,11 +81,22 @@ function parseTurn(payload: unknown): GeminiTurn {
     if (!('functionCall' in part)) return [];
     const call = part.functionCall as { name?: unknown; args?: unknown; id?: unknown } | undefined;
     if (!call || typeof call.name !== 'string') return [];
-    const args = call.args && typeof call.args === 'object' && !Array.isArray(call.args) ? (call.args as Record<string, unknown>) : {};
+    const args = parseCallArgs(call.args);
     return [{ name: call.name, args, ...(typeof call.id === 'string' ? { id: call.id } : {}) }];
   });
   if (!text && functionCalls.length === 0) throw aiError('GEMINI_UNAVAILABLE', 'The assistant returned an empty response.', 502);
   return { text: text || null, functionCalls, modelParts };
+}
+
+function parseCallArgs(value: unknown): Record<string, unknown> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>;
+  if (typeof value !== 'string' || !value.trim()) return {};
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
 }
 
 function ensureSlash(baseUrl: string): string {

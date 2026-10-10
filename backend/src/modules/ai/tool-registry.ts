@@ -256,7 +256,7 @@ export class ArahToolRegistry {
     }
     const parsed = validateToolArgs(entry.schema, rawArgs ?? {});
     if (!parsed.ok) {
-      return { result: unavailable('AI_TOOL_INVALID_ARGUMENTS'), activity: { name, status: 'rejected', activity: entry.activity } };
+      return { result: { code: 'AI_TOOL_INVALID_ARGUMENTS', hint: 'Retry with only the documented fields. Send coordinates as JSON numbers.' }, activity: { name, status: 'unavailable', activity: entry.activity } };
     }
     try {
       const result = bound(await entry.run(parsed.args, context));

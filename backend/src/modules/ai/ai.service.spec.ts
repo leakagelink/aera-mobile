@@ -37,6 +37,18 @@ describe('AiService', () => {
     expect(JSON.stringify(result)).not.toContain('gemini-test-key');
   });
 
+  it('sends a list of places as an object on the next model turn', async () => {
+    const generate = jest
+      .fn()
+      .mockResolvedValueOnce({ text: null, functionCalls: [{ name: 'searchPlace', args: { query: 'park' } }] })
+      .mockResolvedValueOnce({ text: 'Park mil gaya.', functionCalls: [] });
+    const execute = jest.fn(async () => ({ result: [{ name: 'Park' }], activity: { name: 'searchPlace', status: 'ok', activity: 'Searching...' } }));
+    const { ai } = service({ generate, execute });
+    await expect(ai.chat('user-1', { message: 'park' })).resolves.toMatchObject({ message: 'Park mil gaya.' });
+    const contents = generate.mock.calls[1][0].contents as { parts: { functionResponse?: { response?: unknown } }[] }[];
+    expect(contents.at(-1)?.parts[0]?.functionResponse?.response).toEqual({ items: [{ name: 'Park' }] });
+  });
+
   it('asks the model to reply in the language the user selected', async () => {
     const { ai, generate } = service();
     await ai.chat('user-1', { message: 'Namaste', language: 'hi' });
