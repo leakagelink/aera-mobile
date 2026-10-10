@@ -320,7 +320,7 @@ async function renderGoogle() {
 
 function providerHint(entry) {
   if (entry.provider === 'relay') return 'Paste the Relay Models key from relaymodels.com. Arah calls this API only when Gemini cannot answer. Leave Default off so Gemini stays first.';
-  if (entry.provider === 'elevenlabs') return 'Paste the ElevenLabs API key. The model field is the voice ID. Leave the base URL as api.elevenlabs.io unless the key belongs to a residency workspace. Turn Enabled on. Audio is not stored.';
+  if (entry.provider === 'elevenlabs') return 'Paste the secret API key shown once when you create it. It starts with sk_. The key ID in the list will not work. The model field is the voice ID. Leave the base URL as api.elevenlabs.io unless the key belongs to a residency workspace. Turn Enabled on. Audio is not stored.';
   if (entry.provider === 'tomtom') return 'Paste the TomTom key and turn Enabled on. The key must include Traffic Flow. Arah asks for speed in km/h.';
   return 'Paste only the ' + entry.name + ' key. OpenWeather, TomTom, Gemini, Relay Models, and ElevenLabs each keep a different key.';
 }

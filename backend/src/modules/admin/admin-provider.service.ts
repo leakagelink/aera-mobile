@@ -68,7 +68,7 @@ export class AdminProviderService {
     const entry = catalogEntry(row.provider);
     if (!entry) throw new BadRequestException('Provider is not supported.');
     const apiKey = this.configs.secretFor(row);
-    const result = await probeProvider(entry.provider, { baseUrl: row.base_url, apiKey, timeoutMs: row.timeout_ms }, this.config);
+    const result = await probeProvider(entry.provider, { baseUrl: row.base_url, apiKey, timeoutMs: row.timeout_ms, model: row.model }, this.config);
     if (result.success && result.baseUrl && result.baseUrl !== row.base_url.replace(/\/$/, '')) {
       await this.configs.update(id, { baseUrl: result.baseUrl });
     }

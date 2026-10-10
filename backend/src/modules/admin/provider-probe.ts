@@ -1,5 +1,5 @@
 import type { AppConfig } from '../../config/load-config';
-import { elevenLabsOrigin } from '../../providers/elevenlabs.provider';
+import { DEFAULT_ELEVENLABS_VOICE, elevenLabsOrigin } from '../../providers/elevenlabs.provider';
 import { OpenWeatherProvider } from '../../providers/openweather.provider';
 import { TomTomTrafficProvider } from '../../providers/tomtom-traffic.provider';
 import type { ProviderSlug } from '../../providers/catalog';
@@ -15,7 +15,11 @@ export type ProbeResult = {
 const TEST_LATITUDE = 22.7196;
 const TEST_LONGITUDE = 75.8577;
 
-export async function probeProvider(provider: ProviderSlug, target: { baseUrl: string; apiKey: string | null; timeoutMs: number }, config: Pick<AppConfig, 'geocodingUserAgent'>): Promise<ProbeResult> {
+export async function probeProvider(
+  provider: ProviderSlug,
+  target: { baseUrl: string; apiKey: string | null; timeoutMs: number; model?: string | null },
+  config: Pick<AppConfig, 'geocodingUserAgent'>,
+): Promise<ProbeResult> {
   const started = Date.now();
   try {
     if (provider === 'openweather') {
@@ -85,14 +89,27 @@ const ELEVENLABS_HOSTS = [
   'https://api.sg.residency.elevenlabs.io',
 ];
 
-async function probeElevenLabs(target: { baseUrl: string; apiKey: string | null; timeoutMs: number }, started: number): Promise<ProbeResult> {
+async function probeElevenLabs(target: { baseUrl: string; apiKey: string | null; timeoutMs: number; model?: string | null }, started: number): Promise<ProbeResult> {
   if (!target.apiKey) return done(started, false, 'ElevenLabs is not configured');
   const origin = elevenLabsOrigin(target.baseUrl);
   const first = await elevenGet(new URL('v1/models', origin).toString(), target.apiKey, target.timeoutMs);
   if (first.ok) return done(started, true, 'ElevenLabs connection successful', origin);
-  if (!first.ok && !first.residency) {
+  const rejected = elevenKeyMessage(first.detail);
+  if (rejected) return done(started, false, rejected);
+  if (!first.residency) {
     const voices = await elevenGet(new URL('v1/voices', origin).toString(), target.apiKey, target.timeoutMs);
     if (voices.ok) return done(started, true, 'ElevenLabs connection successful', origin);
+    const voicesRejected = elevenKeyMessage(voices.detail);
+    if (voicesRejected) return done(started, false, voicesRejected);
+    if (first.detail === 'missing_permissions' || voices.detail === 'missing_permissions') {
+      const spoken = await elevenSpeak(origin, target);
+      if (spoken.ok) return done(started, true, 'ElevenLabs connection successful', origin);
+      const spokenRejected = elevenKeyMessage(spoken.detail);
+      if (spokenRejected) return done(started, false, spokenRejected);
+      if (spoken.detail === 'missing_permissions') {
+        return done(started, false, 'This ElevenLabs key cannot speak. Turn on Text to Speech for the key.');
+      }
+    }
   }
   if (first.residency) {
     for (const host of ELEVENLABS_HOSTS) {
@@ -105,13 +122,52 @@ async function probeElevenLabs(target: { baseUrl: string; apiKey: string | null;
   return done(started, false, 'ElevenLabs connection failed');
 }
 
-async function elevenGet(url: string, apiKey: string, timeoutMs: number): Promise<{ ok: boolean; residency: boolean }> {
+type ElevenAttempt = { ok: boolean; residency: boolean; detail: string };
+
+async function elevenGet(url: string, apiKey: string, timeoutMs: number): Promise<ElevenAttempt> {
   const response = await fetch(url, {
     signal: AbortSignal.timeout(timeoutMs),
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'xi-api-key': apiKey },
+    headers: { Accept: 'application/json', 'xi-api-key': apiKey },
   });
   const text = await response.text().catch(() => '');
-  return { ok: response.ok, residency: /data residency/i.test(text) };
+  const detail = elevenDetail(text);
+  return { ok: response.ok, residency: detail === 'restricted_api_key' || /data residency/i.test(text), detail };
+}
+
+async function elevenSpeak(
+  origin: string,
+  target: { apiKey: string | null; timeoutMs: number; model?: string | null },
+): Promise<ElevenAttempt> {
+  const voiceId = target.model?.trim() || DEFAULT_ELEVENLABS_VOICE;
+  const url = new URL(`v1/text-to-speech/${encodeURIComponent(voiceId)}`, origin);
+  url.searchParams.set('output_format', 'mp3_22050_32');
+  const response = await fetch(url.toString(), {
+    method: 'POST',
+    signal: AbortSignal.timeout(target.timeoutMs),
+    headers: { Accept: 'audio/mpeg', 'Content-Type': 'application/json', 'xi-api-key': target.apiKey ?? '' },
+    body: JSON.stringify({ text: 'Hi', model_id: 'eleven_multilingual_v2' }),
+  });
+  const text = response.ok ? '' : await response.text().catch(() => '');
+  const detail = elevenDetail(text);
+  return { ok: response.ok, residency: false, detail };
+}
+
+function elevenDetail(text: string): string {
+  try {
+    const body = JSON.parse(text) as { detail?: { status?: unknown } | string };
+    if (body.detail && typeof body.detail === 'object' && typeof body.detail.status === 'string') return body.detail.status;
+  } catch {
+    return '';
+  }
+  return '';
+}
+
+function elevenKeyMessage(detail: string): string | null {
+  if (detail === 'api_key_id_used_as_api_key') {
+    return 'Paste the ElevenLabs secret key, not the key ID. The secret is shown once when the key is created and starts with sk_.';
+  }
+  if (detail === 'invalid_api_key') return 'ElevenLabs rejected the API key.';
+  return null;
 }
 
 async function probeOsrm(target: { baseUrl: string; timeoutMs: number }, started: number): Promise<ProbeResult> {

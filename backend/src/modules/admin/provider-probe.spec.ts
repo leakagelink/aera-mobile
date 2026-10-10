@@ -70,4 +70,26 @@ describe('probeProvider', () => {
     expect(result.success).toBe(true);
     expect(result.message).toBe('ElevenLabs connection successful');
   });
+
+  it('tells the admin when the ElevenLabs key ID was pasted', async () => {
+    global.fetch = jest.fn(async () => ({ ok: false, status: 400, text: async () => '{"detail":{"status":"api_key_id_used_as_api_key"}}' }) as Response) as typeof fetch;
+
+    const result = await probeProvider('elevenlabs', { baseUrl: 'https://api.elevenlabs.io', apiKey: 'eleven-secret', timeoutMs: 1000 }, { geocodingUserAgent: 'test' });
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('secret key');
+    expect(JSON.stringify(result)).not.toContain('eleven-secret');
+  });
+
+  it('accepts an ElevenLabs key that can speak when list calls are blocked', async () => {
+    global.fetch = jest.fn(async (url: string | URL, init?: RequestInit) => {
+      if (init?.method === 'POST' && String(url).includes('/v1/text-to-speech/')) return { ok: true, status: 200, text: async () => '' } as Response;
+      return { ok: false, status: 401, text: async () => '{"detail":{"status":"missing_permissions"}}' } as Response;
+    }) as typeof fetch;
+
+    const result = await probeProvider('elevenlabs', { baseUrl: 'https://api.elevenlabs.io', apiKey: 'eleven-secret', timeoutMs: 1000, model: 'voice-1' }, { geocodingUserAgent: 'test' });
+
+    expect(result.success).toBe(true);
+    expect(result.message).toBe('ElevenLabs connection successful');
+  });
 });
