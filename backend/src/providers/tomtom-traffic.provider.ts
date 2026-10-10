@@ -12,7 +12,7 @@ export class TomTomTrafficProvider {
 
   constructor(private readonly fetchTraffic: TrafficFetch = defaultTrafficFetch) {}
 
-  async report(input: { latitude: number; longitude: number; baseUrl: string; apiKey: string; timeoutMs: number }): Promise<TrafficReport> {
+  async report(input: { latitude: number; longitude: number; baseUrl: string; apiKey: string; timeoutMs: number; includeIncidents?: boolean }): Promise<TrafficReport> {
     const flowUrl = new URL('/traffic/services/4/flowSegmentData/absolute/10/json', ensureSlash(input.baseUrl));
     flowUrl.searchParams.set('point', `${input.latitude},${input.longitude}`);
     flowUrl.searchParams.set('unit', 'kmph');
@@ -24,7 +24,7 @@ export class TomTomTrafficProvider {
     if (flow.status < 200 || flow.status >= 300) {
       return { available: false, reason: 'unavailable', flow: null, incidents: [] };
     }
-    const incidents = await this.incidents(input).catch(() => []);
+    const incidents = input.includeIncidents === false ? [] : await this.incidents(input).catch(() => []);
     return { available: true, flow: normalizeFlow(flow.body), incidents };
   }
 
