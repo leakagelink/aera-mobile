@@ -1,6 +1,7 @@
 export type TrafficReport = {
   available: boolean;
   reason?: 'not_configured' | 'location_required' | 'unavailable' | 'auth_failed';
+  publicMessage?: string;
   flow: { currentSpeedMps: number | null; freeFlowSpeedMps: number | null; confidence: number | null; roadClosure: boolean | null } | null;
   incidents: { category: string | null; delaySeconds: number | null; description: string | null; lengthMeters: number | null }[];
 };
@@ -19,7 +20,7 @@ export class TomTomTrafficProvider {
     flowUrl.searchParams.set('key', input.apiKey);
     const flow = await this.read(flowUrl.toString(), input.timeoutMs);
     if (flow.status === 401 || flow.status === 403) {
-      return { available: false, reason: 'auth_failed', flow: null, incidents: [] };
+      return { available: false, reason: 'auth_failed', publicMessage: tomtomAuthMessage(flow.body, input.apiKey), flow: null, incidents: [] };
     }
     if (flow.status < 200 || flow.status >= 300) {
       return { available: false, reason: 'unavailable', flow: null, incidents: [] };
@@ -49,6 +50,22 @@ export class TomTomTrafficProvider {
       return { status: 502, body: null };
     }
   }
+}
+
+export function tomtomAuthMessage(body: unknown, apiKey: string): string {
+  const message = readProviderMessage(body).split(apiKey).join('');
+  if (/not allowed to access this endpoint/i.test(message)) {
+    return 'TomTom is blocking this key. In the TomTom dashboard, add Traffic Flow to this key, then save the same key here again.';
+  }
+  return 'TomTom rejected the API key. Turn on Traffic Flow for this key.';
+}
+
+function readProviderMessage(body: unknown): string {
+  if (!body || typeof body !== 'object') return '';
+  const record = body as { message?: unknown; detailedError?: { message?: unknown } };
+  if (typeof record.detailedError?.message === 'string') return record.detailedError.message;
+  if (typeof record.message === 'string') return record.message;
+  return '';
 }
 
 function normalizeFlow(payload: unknown): TrafficReport['flow'] {

@@ -42,7 +42,7 @@ export async function probeProvider(
     return probeMartin(target, started);
   } catch (error) {
     if (error instanceof WeatherProviderError && error.code === 'WEATHER_PROVIDER_AUTH_FAILED') {
-      return done(started, false, 'OpenWeather connection failed');
+      return done(started, false, 'OpenWeather rejected this key. Copy the key from the API keys page, not the name. A new key can take up to 2 hours to start, and Current Weather must be enabled.');
     }
     return done(started, false, failureMessage(provider));
   }
@@ -58,8 +58,8 @@ async function probeTomTom(target: { baseUrl: string; apiKey: string | null; tim
     timeoutMs: target.timeoutMs,
   });
   if (report.available) return done(started, true, 'TomTom connection successful');
-  const message = report.reason === 'auth_failed' ? 'TomTom rejected the API key. Turn on Traffic Flow for this key.' : 'TomTom connection failed';
-  return done(started, false, message);
+  if (report.reason === 'auth_failed') return done(started, false, report.publicMessage ?? 'TomTom rejected the API key. Turn on Traffic Flow for this key.');
+  return done(started, false, 'TomTom connection failed');
 }
 
 async function probeGemini(target: { baseUrl: string; apiKey: string | null; timeoutMs: number }, started: number): Promise<ProbeResult> {

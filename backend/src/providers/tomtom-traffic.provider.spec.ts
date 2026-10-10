@@ -30,4 +30,14 @@ describe('TomTomTrafficProvider', () => {
       provider.report({ latitude: 1, longitude: 2, baseUrl: 'https://api.tomtom.com', apiKey: 'tomtom-test-key', timeoutMs: 1000 }),
     ).resolves.toMatchObject({ available: false, reason: 'auth_failed', incidents: [] });
   });
+
+  it('says when TomTom blocks the key and does not repeat the key', async () => {
+    const provider = new TomTomTrafficProvider(async () => ({
+      status: 403,
+      body: { detailedError: { code: 'Forbidden', message: 'You are not allowed to access this endpoint. key tomtom-test-key' } },
+    }));
+    const report = await provider.report({ latitude: 1, longitude: 2, baseUrl: 'https://api.tomtom.com', apiKey: 'tomtom-test-key', timeoutMs: 1000 });
+    expect(report.publicMessage).toContain('Traffic Flow');
+    expect(report.publicMessage).not.toContain('tomtom-test-key');
+  });
 });
