@@ -41,6 +41,7 @@ describe('AiService', () => {
     const { ai, generate } = service();
     await ai.chat('user-1', { message: 'Namaste', language: 'hi' });
     expect(generate.mock.calls[0][0].system).toContain('Reply in Hindi');
+    expect(generate.mock.calls[0][0].system).toContain('same speaking style');
   });
 
   it('stops after the configured tool rounds and after repeated rejections', async () => {

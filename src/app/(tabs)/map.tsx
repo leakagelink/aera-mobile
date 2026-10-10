@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { HomeVoice } from '@/components/assistant/HomeVoice';
 import { AeraMap, type AeraMapHandle } from '@/components/map/AeraMap';
 import { JourneyFields } from '@/components/routing/JourneyFields';
 import { AppText } from '@/components/ui/AppText';
@@ -149,6 +150,9 @@ export default function MapScreen() {
           </ScrollView>
         ) : null}
       </View>
+      <View pointerEvents="box-none" style={[styles.voice, { bottom: insets.bottom + (permission !== 'granted' || availability === 'unavailable' ? 176 : 88) }]}>
+        <HomeVoice />
+      </View>
       <View style={styles.actions}>
         <IconButton icon={LocateFixed} label="Recenter map" primary={follow} onPress={() => setFollow(true)} />
         <LocationStatus />
@@ -196,6 +200,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 12,
   },
+  voice: { position: 'absolute', left: 16, right: 16 },
   actions: { position: 'absolute', right: 16, top: '38%', gap: 10, alignItems: 'flex-end' },
   banner: {
     position: 'absolute',
