@@ -15,7 +15,7 @@ export class TomTomTrafficProvider {
   async report(input: { latitude: number; longitude: number; baseUrl: string; apiKey: string; timeoutMs: number }): Promise<TrafficReport> {
     const flowUrl = new URL('/traffic/services/4/flowSegmentData/absolute/10/json', ensureSlash(input.baseUrl));
     flowUrl.searchParams.set('point', `${input.latitude},${input.longitude}`);
-    flowUrl.searchParams.set('unit', 'KMPH');
+    flowUrl.searchParams.set('unit', 'kmph');
     flowUrl.searchParams.set('key', input.apiKey);
     const flow = await this.read(flowUrl.toString(), input.timeoutMs);
     if (flow.status === 401 || flow.status === 403) {

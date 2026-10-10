@@ -14,7 +14,7 @@ export class ElevenLabsProvider {
 
   async speak(input: { baseUrl: string; apiKey: string; voiceId: string; text: string; timeoutMs: number }): Promise<Uint8Array> {
     const voiceId = input.voiceId.trim() || DEFAULT_ELEVENLABS_VOICE;
-    const url = new URL(`v1/text-to-speech/${encodeURIComponent(voiceId)}`, ensureSlash(input.baseUrl));
+    const url = new URL(`v1/text-to-speech/${encodeURIComponent(voiceId)}`, elevenLabsOrigin(input.baseUrl));
     url.searchParams.set('output_format', 'mp3_22050_32');
     const response = await this.fetchEleven(url.toString(), {
       method: 'POST',
@@ -29,7 +29,7 @@ export class ElevenLabsProvider {
   }
 
   async transcribe(input: { baseUrl: string; apiKey: string; audio: Uint8Array; mimeType: string; timeoutMs: number }): Promise<string> {
-    const url = new URL('v1/speech-to-text', ensureSlash(input.baseUrl));
+    const url = new URL('v1/speech-to-text', elevenLabsOrigin(input.baseUrl));
     const form = new FormData();
     form.append('model_id', STT_MODEL);
     form.append('file', new Blob([Uint8Array.from(input.audio)], { type: input.mimeType || 'audio/mp4' }), 'speech.m4a');
@@ -58,8 +58,9 @@ function assertOk(status: number, apiKey: string): void {
   if (apiKey && status === 0) throw voiceError('The voice service is unavailable.');
 }
 
-function ensureSlash(baseUrl: string): string {
-  return baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+export function elevenLabsOrigin(baseUrl: string): string {
+  const trimmed = baseUrl.trim().replace(/\/+$/, '').replace(/\/v1$/i, '');
+  return `${trimmed}/`;
 }
 
 async function defaultElevenFetch(

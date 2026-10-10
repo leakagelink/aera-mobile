@@ -69,6 +69,9 @@ export class AdminProviderService {
     if (!entry) throw new BadRequestException('Provider is not supported.');
     const apiKey = this.configs.secretFor(row);
     const result = await probeProvider(entry.provider, { baseUrl: row.base_url, apiKey, timeoutMs: row.timeout_ms }, this.config);
+    if (result.success && result.baseUrl && result.baseUrl !== row.base_url.replace(/\/$/, '')) {
+      await this.configs.update(id, { baseUrl: result.baseUrl });
+    }
     const makeDefault = result.success && row.enabled && row.provider_type === 'weather';
     await this.rows.markTest(id, { status: result.success ? 'success' : 'failure', message: result.message, latencyMs: result.latencyMs, makeDefault });
     await this.audit.insert({

@@ -5,6 +5,8 @@ describe('TomTomTrafficProvider', () => {
     const provider = new TomTomTrafficProvider(async (url) => {
       expect(url).not.toContain('log');
       if (url.includes('flowSegmentData')) {
+        expect(url).toContain('unit=kmph');
+        expect(url).not.toContain('unit=KMPH');
         return { status: 200, body: { flowSegmentData: { currentSpeed: 36, freeFlowSpeed: 72, confidence: 0.9, roadClosure: false } } };
       }
       return { status: 500, body: { message: 'key=tomtom-test-key' } };
