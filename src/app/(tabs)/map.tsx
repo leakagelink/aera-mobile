@@ -15,19 +15,25 @@ import { useAutoTrip } from '@/features/trips/useAutoTrip';
 import { useForegroundLocation } from '@/features/location/useForegroundLocation';
 import { useAroundYou } from '@/features/map/useAroundYou';
 import { useNearbyCategory } from '@/features/map/useNearbyCategory';
+import { shareEta } from '@/features/navigation/shareEta';
+import { useJourneyRoutes } from '@/features/routing/useJourneyRoutes';
+import { useRouteTraffic } from '@/features/traffic/useRouteTraffic';
 import { distanceMeters } from '@/utils/geo';
+import { errorMessage } from '@/utils/errors';
+import { formatDuration } from '@/utils/format';
 import { useLocationStore } from '@/store/locationStore';
-import { useSessionStore } from '@/store/sessionStore';
+import { usePreferencesStore } from '@/store/preferencesStore';
+import { selectedRoute, useSessionStore } from '@/store/sessionStore';
 import { radius } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
 
 const suggestions = [
-  { id: 'hospital', label: 'Hospital', query: 'hospital', radius: 5_000, icon: Hospital },
+  { id: 'hospital', label: 'Aspatal', query: 'hospital', radius: 5_000, icon: Hospital },
   { id: 'fuel', label: 'Petrol', query: 'fuel', radius: 5_000, icon: Fuel },
   { id: 'coffee', label: 'Coffee', query: 'cafe', radius: 3_000, icon: Coffee },
-  { id: 'food', label: 'Food', query: 'restaurant', radius: 3_000, icon: Utensils },
+  { id: 'food', label: 'Khana', query: 'restaurant', radius: 3_000, icon: Utensils },
   { id: 'parking', label: 'Parking', query: 'parking', radius: 2_000, icon: ParkingCircle },
-  { id: 'parks', label: 'Parks', query: 'park', radius: 3_000, icon: Trees },
+  { id: 'parks', label: 'Park', query: 'park', radius: 3_000, icon: Trees },
   { id: 'airport', label: 'Airport', query: 'airport', radius: 40_000, icon: Plane },
   { id: 'station', label: 'Station', query: '[railway=station]', radius: 15_000, icon: TrainFront },
 ];
@@ -42,7 +48,15 @@ export default function MapScreen() {
   const mapRef = useRef<AeraMapHandle>(null);
   const [follow, setFollow] = useState(true);
   const [categoryId, setCategoryId] = useState<string | null>(null);
+  const home = usePreferencesStore((state) => state.home);
+  const work = usePreferencesStore((state) => state.work);
   const location = useLocationStore((state) => state.current);
+  const destination = useSessionStore((state) => state.destination);
+  const routes = useSessionStore((state) => state.routes);
+  const route = useSessionStore((state) => selectedRoute(state));
+  const units = usePreferencesStore((state) => state.units);
+  const journey = useJourneyRoutes(focused && destination !== null);
+  const traffic = useRouteTraffic(route?.geometry);
   const permission = useLocationStore((state) => state.permission);
   const availability = useLocationStore((state) => state.availability);
   const { here, nearby } = useAroundYou(location);
@@ -51,9 +65,22 @@ export default function MapScreen() {
   const shownPlaces = selected ? category.places : nearby;
 
   useEffect(() => {
-    if (!follow || !location || selected) return;
+    if (selected || destination) return;
+    if (!follow || !location) return;
     mapRef.current?.recenter(location.longitude, location.latitude);
-  }, [follow, location, selected]);
+  }, [follow, location, selected, destination]);
+
+  const destinationId = destination?.id ?? null;
+  const routeId = route?.id ?? null;
+  useEffect(() => {
+    if (selected || !destinationId) return;
+    const current = useLocationStore.getState().current;
+    const chosen = useSessionStore.getState().destination;
+    const activeRoute = selectedRoute(useSessionStore.getState());
+    if (!chosen) return;
+    const points = activeRoute && activeRoute.geometry.length >= 2 ? activeRoute.geometry : current ? [current, chosen] : [chosen];
+    mapRef.current?.fit(points);
+  }, [destinationId, routeId, selected]);
 
   const categoryPlaces = category.places;
   const categoryKey = categoryPlaces.map((place) => place.id).join(',');
@@ -64,17 +91,48 @@ export default function MapScreen() {
     mapRef.current?.fit([current, ...categoryPlaces]);
   }, [categoryKey, categoryPlaces, selected]);
 
+  function openSaved(kind: 'home' | 'work') {
+    const saved = kind === 'home' ? usePreferencesStore.getState().home : usePreferencesStore.getState().work;
+    if (!saved) {
+      router.push('/settings');
+      return;
+    }
+    setFollow(false);
+    useSessionStore.getState().setDestination({
+      id: `saved:${kind}`,
+      name: kind === 'home' ? 'Ghar' : 'Office',
+      address: saved.address,
+      latitude: saved.latitude,
+      longitude: saved.longitude,
+    });
+  }
+
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.ink }]}>
       <AeraMap
         ref={mapRef}
         user={location}
+        destination={destination}
         nearby={shownPlaces}
+        routes={routes.map((item) => ({ id: item.id, coordinates: item.geometry, selected: item.id === route?.id }))}
+        traffic={traffic.lines}
         onUserGesture={() => setFollow(false)}
       />
       <View style={[styles.top, { top: insets.top + 8 }]}>
         <UsualRouteCard location={location} />
         <JourneyFields />
+        <View style={styles.savedRow}>
+          <Pressable accessibilityRole="button" onPress={() => openSaved('home')} style={[styles.chip, { backgroundColor: theme.colors.nav, borderColor: theme.colors.glassBorder }]}>
+            <AppText size={13} weight="semibold">
+              {home ? 'Ghar' : 'Ghar set karo'}
+            </AppText>
+          </Pressable>
+          <Pressable accessibilityRole="button" onPress={() => openSaved('work')} style={[styles.chip, { backgroundColor: theme.colors.nav, borderColor: theme.colors.glassBorder }]}>
+            <AppText size={13} weight="semibold">
+              {work ? 'Office' : 'Office set karo'}
+            </AppText>
+          </Pressable>
+        </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           {suggestions.map((item) => {
             const Icon = item.icon;
@@ -104,31 +162,70 @@ export default function MapScreen() {
             );
           })}
         </ScrollView>
-        {here ? (
+        {destination ? (
+          <Pressable accessibilityRole="button" onPress={() => router.push('/destination')} style={[styles.here, { backgroundColor: theme.colors.nav, borderColor: theme.colors.glassBorder }]}>
+            <AppText size={13} weight="semibold">
+              Jaana hai: {destination.name}
+            </AppText>
+            <AppText size={12} color={theme.colors.mutedForeground}>
+              {route
+                ? `Neela rasta · ${formatDuration(route.durationSeconds)} · ${formatDistance(route.distanceMeters)}`
+                : journey.isFetching
+                  ? 'Asli rasta nikal raha hai…'
+                  : journey.isError
+                    ? errorMessage(journey.error)
+                    : 'Neela rasta abhi nahi hai. Is card par tap karke directions kholo.'}
+            </AppText>
+            {route?.limitNote ? (
+              <AppText size={12} color={theme.colors.mutedForeground}>
+                {route.limitNote}
+              </AppText>
+            ) : null}
+            {traffic.note ? (
+              <AppText size={12} color={theme.colors.mutedForeground}>
+                {traffic.note}
+              </AppText>
+            ) : null}
+            {route ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={(event) => {
+                  event.stopPropagation();
+                  void shareEta({ destination: destination.name, seconds: route.durationSeconds, meters: route.distanceMeters, units });
+                }}
+              >
+                <AppText size={13} weight="semibold" color={theme.colors.primary}>
+                  ETA bhejo
+                </AppText>
+              </Pressable>
+            ) : null}
+          </Pressable>
+        ) : null}
+        {here && !destination ? (
           <View style={[styles.here, { backgroundColor: theme.colors.nav, borderColor: theme.colors.glassBorder }]}>
             <AppText size={13} weight="semibold">
-              You are at {here}
+              Aap yahan ho: {here}
             </AppText>
           </View>
         ) : null}
         {selected && !location ? (
           <View style={[styles.here, { backgroundColor: theme.colors.nav, borderColor: theme.colors.glassBorder }]}>
             <AppText size={13} weight="semibold">
-              Location is needed to find nearby {selected.label.toLowerCase()}.
+              {selected.label} ke liye location chahiye.
             </AppText>
           </View>
         ) : null}
         {selected && location && category.loading ? (
           <View style={[styles.here, { backgroundColor: theme.colors.nav, borderColor: theme.colors.glassBorder }]}>
             <AppText size={13} weight="semibold">
-              Looking for {selected.label.toLowerCase()} nearby…
+              {selected.label} dhoondh raha hoon…
             </AppText>
           </View>
         ) : null}
         {selected && location && !category.loading && category.places.length === 0 ? (
           <View style={[styles.here, { backgroundColor: theme.colors.nav, borderColor: theme.colors.glassBorder }]}>
             <AppText size={13} weight="semibold">
-              No {selected.label.toLowerCase()} close to you.
+              Paas mein {selected.label} nahi mila.
             </AppText>
           </View>
         ) : null}
@@ -158,7 +255,23 @@ export default function MapScreen() {
         <HomeVoice />
       </View>
       <View style={styles.actions}>
-        <IconButton icon={LocateFixed} label="Recenter map" primary={follow} onPress={() => setFollow(true)} />
+        <IconButton
+          icon={LocateFixed}
+          label="Map wapas lao"
+          primary={follow}
+          onPress={() => {
+            setFollow(true);
+            const chosen = useSessionStore.getState().destination;
+            const activeRoute = selectedRoute(useSessionStore.getState());
+            const current = useLocationStore.getState().current;
+            if (chosen) {
+              const points = activeRoute && activeRoute.geometry.length >= 2 ? activeRoute.geometry : current ? [current, chosen] : [chosen];
+              mapRef.current?.fit(points);
+              return;
+            }
+            if (current) mapRef.current?.recenter(current.longitude, current.latitude);
+          }}
+        />
         <LocationStatus />
       </View>
       {permission !== 'granted' || availability === 'unavailable' ? (
@@ -168,10 +281,10 @@ export default function MapScreen() {
           style={[styles.banner, { bottom: insets.bottom + 96, backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
         >
           <AppText size={14} weight="semibold">
-            {permission === 'denied' ? 'Location is off' : 'Location is needed for navigation'}
+            {permission === 'denied' ? 'Location band hai' : 'Raste ke liye location chahiye'}
           </AppText>
           <AppText size={12} color={theme.colors.mutedForeground}>
-            Tap to review foreground location access.
+            Tap karke location on karo. Background mein nahi chalti.
           </AppText>
         </Pressable>
       ) : null}
@@ -188,6 +301,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   top: { position: 'absolute', left: 16, right: 16, gap: 12 },
   chips: { gap: 8, paddingRight: 8 },
+  savedRow: { flexDirection: 'row', gap: 8 },
   here: {
     alignSelf: 'flex-start',
     borderRadius: radius.md,

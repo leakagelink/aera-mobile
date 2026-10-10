@@ -16,14 +16,14 @@ import { useTheme } from '@/theme/useTheme';
 import type { UnitSystem } from '@/utils/format';
 
 const themes: { id: ThemePreference; label: string }[] = [
-  { id: 'dark', label: 'Dark' },
-  { id: 'light', label: 'Light' },
-  { id: 'system', label: 'System' },
+  { id: 'dark', label: 'Andhera' },
+  { id: 'light', label: 'Ujala' },
+  { id: 'system', label: 'Phone' },
 ];
 
 const units: { id: UnitSystem; label: string }[] = [
-  { id: 'metric', label: 'Metric' },
-  { id: 'imperial', label: 'Imperial' },
+  { id: 'metric', label: 'Km' },
+  { id: 'imperial', label: 'Mile' },
 ];
 
 const languages: { id: AssistantLanguage; label: string }[] = [
@@ -64,7 +64,7 @@ export default function SettingsScreen() {
   async function saveShortcut(kind: 'home' | 'work') {
     const current = useLocationStore.getState().current;
     if (!current) {
-      Alert.alert('Location needed', 'Allow location, then set this place from where you are.');
+      Alert.alert('Location chahiye', 'Location on karo, phir jahan ho wahan se ye jagah set karo.');
       return;
     }
     try {
@@ -78,31 +78,31 @@ export default function SettingsScreen() {
       if (kind === 'home') setHome(shortcut);
       else setWork(shortcut);
     } catch {
-      Alert.alert('Place was not saved', 'The address lookup failed. Try again.');
+      Alert.alert('Jagah save nahi hui', 'Pata nahi mila. Dobara try karo.');
     }
   }
 
   function confirmClear() {
-    Alert.alert('Delete trip history?', 'This removes journeys stored on this device. It cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => void clearHistory() },
+    Alert.alert('Safar ki list mita dein?', 'Is phone par save safar hat jayenge. Wapas nahi aayenge.', [
+      { text: 'Rehne do', style: 'cancel' },
+      { text: 'Mitao', style: 'destructive', onPress: () => void clearHistory() },
     ]);
   }
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
-      <ScreenHeader title="Settings" onBack={() => router.back()} />
+      <ScreenHeader title="Setting" onBack={() => router.back()} />
       <ScrollView contentContainerStyle={styles.content}>
         <AppText size={11} weight="bold" color={theme.colors.mutedForeground} style={styles.label}>
-          Appearance
+          Dikhavat
         </AppText>
         <ChoiceRow options={themes} value={preference} onChange={setTheme} />
         <AppText size={11} weight="bold" color={theme.colors.mutedForeground} style={styles.label}>
-          Units
+          Maap
         </AppText>
         <ChoiceRow options={units} value={unit} onChange={setUnits} />
         <AppText size={11} weight="bold" color={theme.colors.mutedForeground} style={styles.label}>
-          Assistant language
+          Assistant ki bhasha
         </AppText>
         <View style={styles.languages}>
           {languages.map((option) => {
@@ -123,13 +123,13 @@ export default function SettingsScreen() {
           })}
         </View>
         <AppText size={13} color={theme.colors.mutedForeground} style={styles.note}>
-          Auto follows the language you type. Chats stay on this phone. Arah does not save the conversation on the server.
+          Auto usi bhasha mein jawab deta hai jo aap likho. Chat is phone par rehti hai. Server par tabhi save hoti hai jab neeche wala switch on ho.
         </AppText>
         <AppText size={11} weight="bold" color={theme.colors.mutedForeground} style={styles.label}>
-          Saved places
+          Bachayi jagah
         </AppText>
-        <ShortcutRow label="Home" place={home} onSave={() => void saveShortcut('home')} onClear={() => setHome(null)} />
-        <ShortcutRow label="Work" place={work} onSave={() => void saveShortcut('work')} onClear={() => setWork(null)} />
+        <ShortcutRow label="Ghar" place={home} onSave={() => void saveShortcut('home')} onClear={() => setHome(null)} />
+        <ShortcutRow label="Office" place={work} onSave={() => void saveShortcut('work')} onClear={() => setWork(null)} />
         {favorites.map((place) => (
           <Pressable
             key={`${place.latitude},${place.longitude}`}
@@ -141,7 +141,7 @@ export default function SettingsScreen() {
               {place.name}
             </AppText>
             <AppText size={13} color={theme.colors.mutedForeground}>
-              Saved place. Tap to remove.
+              Bachayi jagah. Hatane ke liye tap karo.
             </AppText>
           </Pressable>
         ))}
@@ -156,14 +156,14 @@ export default function SettingsScreen() {
           style={[styles.link, { backgroundColor: theme.colors.surface }]}
         >
           <AppText size={15} weight="medium">
-            {rememberChats ? 'Saved chats are on' : 'Saved chats are off'}
+            {rememberChats ? 'Chat save on hai' : 'Chat save off hai'}
           </AppText>
           <AppText size={13} color={theme.colors.mutedForeground}>
-            Recent assistant text stays on the server until you turn this off or delete the account.
+            Haal ki assistant chat server par 30 din tak rehti hai, jab tak aap ise band na karo ya account mitao.
           </AppText>
         </Pressable>
         <AppText size={11} weight="bold" color={theme.colors.mutedForeground} style={styles.label}>
-          Privacy
+          Gopniyata
         </AppText>
         {signedIn ? (
           <Pressable
@@ -172,18 +172,18 @@ export default function SettingsScreen() {
             style={[styles.link, { backgroundColor: theme.colors.surface }]}
           >
             <AppText size={15} weight="medium">
-              Turn on notifications
+              Notification on karo
             </AppText>
           </Pressable>
         ) : null}
         <Pressable accessibilityRole="button" onPress={() => router.push('/privacy')} style={[styles.link, { backgroundColor: theme.colors.surface }]}>
           <AppText size={15} weight="medium">
-            Privacy and location
+            Privacy aur location
           </AppText>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={confirmClear} style={[styles.link, { backgroundColor: `${theme.colors.error}14` }]}>
           <AppText size={15} weight="semibold" color={theme.colors.error}>
-            Delete trip history
+            Safar ki list mitao
           </AppText>
         </Pressable>
       </ScrollView>
@@ -199,18 +199,18 @@ function ShortcutRow({ label, place, onSave, onClear }: { label: string; place: 
         {label}
       </AppText>
       <AppText size={13} color={theme.colors.mutedForeground}>
-        {place ? place.name : 'Not set'}
+        {place ? place.name : 'Set nahi hai'}
       </AppText>
       <View style={styles.shortcutActions}>
         <Pressable accessibilityRole="button" onPress={onSave}>
           <AppText size={13} weight="semibold" color={theme.colors.primary}>
-            {place ? 'Update from here' : 'Set from here'}
+            {place ? 'Yahan se badlo' : 'Yahan se set karo'}
           </AppText>
         </Pressable>
         {place ? (
           <Pressable accessibilityRole="button" onPress={onClear}>
             <AppText size={13} weight="semibold" color={theme.colors.error}>
-              Clear
+              Hatao
             </AppText>
           </Pressable>
         ) : null}

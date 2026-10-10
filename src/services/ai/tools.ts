@@ -32,8 +32,10 @@ export async function runAeraTool(name: AeraToolName, input: Record<string, unkn
   switch (name) {
     case 'getCurrentLocation':
       return getCurrentLocation();
-    case 'searchPlace':
-      return placeSearchProvider().search(readString(input, 'query'));
+    case 'searchPlace': {
+      const here = useLocationStore.getState().current;
+      return placeSearchProvider().search(readString(input, 'query'), undefined, here ? { latitude: here.latitude, longitude: here.longitude } : undefined);
+    }
     case 'calculateRoute':
       return calculateRoute(readCoordinate(input));
     case 'getAlternativeRoutes':
@@ -86,7 +88,11 @@ function getCurrentLocation() {
 async function calculateRoute(destination: Coordinate) {
   const origin = useLocationStore.getState().current;
   if (!origin) throw new AppError('Current location is not available.', 'unavailable');
-  return routingProvider().calculateRoute(origin, destination);
+  const session = useSessionStore.getState();
+  return routingProvider().calculateRoute(origin, destination, undefined, session.travelMode, {
+    avoidTolls: session.avoidTolls,
+    avoidHighways: session.avoidHighways,
+  });
 }
 
 function getETA() {

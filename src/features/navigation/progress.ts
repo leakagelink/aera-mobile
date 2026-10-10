@@ -38,7 +38,7 @@ export function navigationSnapshot(
     match,
     remainingSeconds,
     eta: now + remainingSeconds * 1000,
-    instruction: match.offRoute ? 'Off the planned route' : (upcoming?.step.instruction ?? 'Continue on the route'),
+    instruction: match.offRoute ? 'Rasta chhoot gaya' : (upcoming?.step.instruction ?? 'Seedha chalte raho'),
     instructionDistanceMeters: match.offRoute ? match.crossTrackMeters : (upcoming?.distanceMeters ?? match.remainingMeters),
     followingInstruction: match.offRoute ? undefined : upcoming?.following?.instruction,
     maneuverType: match.offRoute ? undefined : upcoming?.step.maneuverType,

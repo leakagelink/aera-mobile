@@ -35,21 +35,21 @@ export default function PermissionRoute() {
           <MapPin color={theme.colors.primary} size={42} fill={theme.colors.primary} />
         </View>
         <AppText size={34} weight="semibold" style={styles.title}>
-          Your location powers the journey.
+          Location se rasta chalta hai.
         </AppText>
         <AppText size={16} color={theme.colors.mutedForeground} style={styles.copy}>
-          Arah uses foreground location to show your position, calculate a route, and record a trip only after you start one. It does not track you in the background.
+          Arah location tab use karta hai jab app khuli ho: aapki jagah, rasta, aur trip tabhi record jab aap shuru karo. Background mein nahi chalta.
         </AppText>
         <View style={[styles.note, { backgroundColor: `${theme.colors.success}1A` }]}>
           <ShieldCheck color={theme.colors.success} size={16} />
           <AppText size={12} weight="semibold" color={theme.colors.success}>
-            You control when a trip is recorded
+            Trip tab record hoti hai jab aap chaho
           </AppText>
         </View>
       </View>
-      <PrimaryButton onPress={() => void allow()}>Allow location</PrimaryButton>
+      <PrimaryButton onPress={() => void allow()}>Location on karo</PrimaryButton>
       <SecondaryButton onPress={goMap} style={styles.secondary}>
-        Not now
+        Abhi nahi
       </SecondaryButton>
       <Pressable accessibilityRole="button" onPress={() => router.push('/privacy')} style={styles.privacy}>
         <AppText size={12} weight="medium" color={theme.colors.mutedForeground}>

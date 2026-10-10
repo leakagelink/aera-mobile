@@ -31,7 +31,7 @@ export function TripCard({ title, detail, onPress, onSelect, selected = false }:
       {onSelect ? (
         <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onSelect} hitSlop={8}>
           <AppText size={12} weight="semibold" color={selected ? theme.colors.primary : theme.colors.mutedForeground}>
-            {selected ? 'Selected' : 'Select'}
+            {selected ? 'Chuna' : 'Chuno'}
           </AppText>
         </Pressable>
       ) : null}

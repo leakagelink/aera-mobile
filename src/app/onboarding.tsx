@@ -12,18 +12,18 @@ import { useTheme } from '@/theme/useTheme';
 
 const steps = [
   {
-    title: 'Meet your intelligent map.',
-    copy: 'See where you are, search real places, and follow a live route.',
+    title: 'Apna map.',
+    copy: 'Dekho kahan ho, jagah dhoondo, aur asli raste par chalo.',
     icon: MapPinned,
   },
   {
-    title: 'Compare the way there.',
-    copy: 'Arah asks the road network for distance, time, and alternatives.',
+    title: 'Rasta compare karo.',
+    copy: 'Arah sadak se doori, time, aur doosra rasta maangta hai.',
     icon: Search,
   },
   {
-    title: 'Record the trips you start.',
-    copy: 'Distance, time, and speed stay on this device until you delete them.',
+    title: 'Jo trip shuru karo, woh save hoti hai.',
+    copy: 'Doori, time, aur speed is phone par rehte hain, jab tak aap mitao nahi.',
     icon: Gauge,
   },
 ];
@@ -50,7 +50,7 @@ export default function OnboardingRoute() {
         <LogoMark />
         <Pressable accessibilityRole="button" onPress={finish} style={styles.skip}>
           <AppText size={14} weight="medium" color={theme.colors.mutedForeground}>
-            Skip
+            Chhodo
           </AppText>
         </Pressable>
       </View>
@@ -71,7 +71,7 @@ export default function OnboardingRoute() {
         {item.copy}
       </AppText>
       <PrimaryButton icon={step === steps.length - 1 ? undefined : ArrowRight} onPress={() => (step === steps.length - 1 ? finish() : setStep(step + 1))} style={styles.button}>
-        {step === steps.length - 1 ? 'Get started' : 'Next'}
+        {step === steps.length - 1 ? 'Chalo' : 'Aage'}
       </PrimaryButton>
     </View>
   );

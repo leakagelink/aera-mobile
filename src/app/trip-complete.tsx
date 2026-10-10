@@ -33,7 +33,7 @@ export default function TripCompleteScreen() {
   if (!trip) {
     return (
       <View style={[styles.fill, { backgroundColor: theme.colors.background }]}>
-        <ErrorState title="No completed trip" message="Finish a navigation session to see the summary." actionLabel="Back to map" onAction={() => router.replace('/map')} />
+        <ErrorState title="Koi safar nahi" message="Navigation khatam karo, tab yahan summary aayegi." actionLabel="Map par wapas" onAction={() => router.replace('/map')} />
       </View>
     );
   }
@@ -49,27 +49,27 @@ export default function TripCompleteScreen() {
         <Check color={theme.colors.success} size={42} strokeWidth={2.5} />
       </View>
       <AppText size={36} weight="semibold" style={styles.title}>
-        Trip complete
+        Safar khatam
       </AppText>
       <AppText size={14} color={theme.colors.mutedForeground}>
         {trip.originName} → {trip.destinationName}
       </AppText>
       <View style={styles.metrics}>
-        <MetricCard label="Distance" value={formatDistance(trip.distanceMeters, units)} />
-        <MetricCard label="Duration" value={formatDuration(trip.durationSeconds)} />
+        <MetricCard label="Doori" value={formatDistance(trip.distanceMeters, units)} />
+        <MetricCard label="Time" value={formatDuration(trip.durationSeconds)} />
         <MetricCard label="Average speed" value={formatSpeed(trip.averageSpeedMps, units)} unit={speedUnit(units)} />
-        <MetricCard label="Maximum speed" value={formatSpeed(trip.maxSpeedMps, units)} unit={speedUnit(units)} />
-        {trip.movingTimeSeconds !== undefined ? <MetricCard label="Moving" value={formatDuration(trip.movingTimeSeconds)} /> : null}
-        {trip.stoppedTimeSeconds !== undefined ? <MetricCard label="Stopped" value={formatDuration(trip.stoppedTimeSeconds)} /> : null}
+        <MetricCard label="Sabse tez" value={formatSpeed(trip.maxSpeedMps, units)} unit={speedUnit(units)} />
+        {trip.movingTimeSeconds !== undefined ? <MetricCard label="Chalte" value={formatDuration(trip.movingTimeSeconds)} /> : null}
+        {trip.stoppedTimeSeconds !== undefined ? <MetricCard label="Ruke" value={formatDuration(trip.stoppedTimeSeconds)} /> : null}
       </View>
       <View style={[styles.times, { backgroundColor: theme.colors.surface }]}>
-        <AppText size={14}>Started {formatClock(trip.startedAt)}</AppText>
-        <AppText size={14}>Ended {formatClock(trip.endedAt)}</AppText>
+        <AppText size={14}>Shuru {formatClock(trip.startedAt)}</AppText>
+        <AppText size={14}>Khatam {formatClock(trip.endedAt)}</AppText>
         <AppText size={13} color={theme.colors.mutedForeground}>
           {trip.routeSummary}
         </AppText>
         <AppText size={12} color={theme.colors.mutedForeground}>
-          {trip.sampleCount} location samples
+          {trip.sampleCount} location ke nishaan
         </AppText>
       </View>
       <View style={styles.map}>
@@ -83,9 +83,9 @@ export default function TripCompleteScreen() {
           ]}
         />
       </View>
-      <PrimaryButton onPress={() => router.push({ pathname: '/trip/[id]', params: { id: trip.id } })}>View trip</PrimaryButton>
+      <PrimaryButton onPress={() => router.push({ pathname: '/trip/[id]', params: { id: trip.id } })}>Safar dekho</PrimaryButton>
       <SecondaryButton onPress={goMap} style={styles.secondary}>
-        Back to map
+        Map par wapas
       </SecondaryButton>
     </ScrollView>
   );

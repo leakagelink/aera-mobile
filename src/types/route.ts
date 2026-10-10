@@ -27,6 +27,12 @@ export type RouteAlternative = {
   geometry: Coordinate[];
   steps: RouteStep[];
   annotations?: RouteAnnotations;
+  limitNote?: string | null;
+};
+
+export type RouteLimits = {
+  avoidTolls?: boolean;
+  avoidHighways?: boolean;
 };
 
 export type NearestRoad = {

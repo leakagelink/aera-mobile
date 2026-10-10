@@ -15,7 +15,7 @@ const nominatim: PlaceSearchProvider & GeocodingProvider = {
 
 const osrm: RoutingProvider = {
   id: 'osrm',
-  calculateRoute: (origin, destination, signal, mode = 'car') => fetchRoutes(origin, destination, osrmProfile(mode), mode, signal),
+  calculateRoute: (origin, destination, signal, mode = 'car', limits) => fetchRoutes(origin, destination, osrmProfile(mode), mode, signal, limits),
   nearestRoad,
   matchTrace,
 };

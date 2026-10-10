@@ -4,7 +4,7 @@ import { instructionFor } from '@/features/routing/instructions';
 import { env } from '@/services/env';
 import { requestJson } from '@/services/http';
 import type { Coordinate } from '@/types/location';
-import type { MatchedTrace, NearestRoad, RouteAlternative, RouteStep } from '@/types/route';
+import type { MatchedTrace, NearestRoad, RouteAlternative, RouteLimits, RouteStep } from '@/types/route';
 import { travelModeLabel, type OsrmProfile, type TravelMode } from '@/types/travel';
 import { AppError } from '@/utils/errors';
 import { isValidCoordinate } from '@/utils/geo';
@@ -53,11 +53,57 @@ export async function fetchRoutes(
   profile: OsrmProfile,
   mode: TravelMode,
   signal?: AbortSignal,
+  limits?: RouteLimits,
 ): Promise<RouteAlternative[]> {
   if (!isValidCoordinate(origin.latitude, origin.longitude) || !isValidCoordinate(destination.latitude, destination.longitude)) {
     throw new AppError('Choose a valid destination.', 'invalid');
   }
 
+  const exclude = excludeClasses(limits);
+  const first = await requestRoute(origin, destination, profile, signal, exclude);
+  if (exclude && isUnsupportedExclude(first)) {
+    const plain = await requestRoute(origin, destination, profile, signal);
+    return routesFrom(plain, mode, unsupportedLimitNote(limits), false);
+  }
+  return routesFrom(first, mode, exclude ? appliedLimitNote(limits) : null, Boolean(exclude));
+}
+
+function excludeClasses(limits?: RouteLimits): string {
+  const parts: string[] = [];
+  if (limits?.avoidTolls) parts.push('toll');
+  if (limits?.avoidHighways) parts.push('motorway');
+  return parts.join(',');
+}
+
+function unsupportedLimitNote(limits?: RouteLimits): string {
+  if (limits?.avoidTolls && limits?.avoidHighways) {
+    return 'Toll aur highway filter nahi laga. Ye routing server unhe hata kar rasta nahi nikalta. Dikha hua rasta normal hai.';
+  }
+  if (limits?.avoidTolls) {
+    return 'Toll filter nahi laga. Ye routing server toll hata kar rasta nahi nikalta. Dikha hua rasta normal hai.';
+  }
+  return 'Highway filter nahi laga. Ye routing server highway hata kar rasta nahi nikalta. Dikha hua rasta normal hai.';
+}
+
+function appliedLimitNote(limits?: RouteLimits): string {
+  if (limits?.avoidTolls && limits?.avoidHighways) return 'Ye rasta toll aur highway ke bina hai.';
+  if (limits?.avoidTolls) return 'Ye rasta toll ke bina hai.';
+  return 'Ye rasta highway ke bina hai.';
+}
+
+function isUnsupportedExclude(payload: OsrmRoutePayload | { unsupported: true }): payload is { unsupported: true } {
+  return 'unsupported' in payload;
+}
+
+type OsrmRoutePayload = z.infer<typeof responseSchema>;
+
+async function requestRoute(
+  origin: Coordinate,
+  destination: Coordinate,
+  profile: OsrmProfile,
+  signal?: AbortSignal,
+  exclude?: string,
+): Promise<OsrmRoutePayload | { unsupported: true }> {
   const path = `${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}`;
   const url = new URL(`/route/v1/${profile}/${path}`, env.routingBaseUrl);
   url.searchParams.set('overview', 'full');
@@ -65,27 +111,46 @@ export async function fetchRoutes(
   url.searchParams.set('steps', 'true');
   url.searchParams.set('alternatives', 'true');
   url.searchParams.set('annotations', 'distance,duration');
+  if (exclude) url.searchParams.set('exclude', exclude);
 
-  const payload = await requestJson(url.toString(), {
-    headers: { 'User-Agent': env.geocodingUserAgent },
-    signal,
-    timeoutMs: 15_000,
-  });
-  const parsed = responseSchema.safeParse(payload);
-  if (!parsed.success) {
-    throw new AppError('Routing returned an unexpected response.', 'osrm');
+  try {
+    const payload = await requestJson(url.toString(), {
+      headers: { 'User-Agent': env.geocodingUserAgent },
+      signal,
+      timeoutMs: 15_000,
+    });
+    const parsed = responseSchema.safeParse(payload);
+    if (!parsed.success) throw new AppError('Routing returned an unexpected response.', 'osrm');
+    if (exclude && parsed.data.code === 'InvalidOptions') return { unsupported: true };
+    return parsed.data;
+  } catch (error) {
+    if (exclude && error instanceof AppError && /exclude|not supported|invalidoptions|request failed \(400\)/i.test(error.message)) {
+      return { unsupported: true };
+    }
+    throw error;
   }
-  if (parsed.data.code !== 'Ok' || !parsed.data.routes?.length) {
-    const unavailable = parsed.data.code === 'NoRoute' || parsed.data.code === 'NoSegment';
+}
+
+function routesFrom(
+  payload: OsrmRoutePayload | { unsupported: true },
+  mode: TravelMode,
+  limitNote: string | null,
+  filtered: boolean,
+): RouteAlternative[] {
+  if ('unsupported' in payload || payload.code !== 'Ok' || !payload.routes?.length) {
+    const code = 'unsupported' in payload ? '' : payload.code;
+    const message = 'unsupported' in payload ? '' : payload.message;
+    const unavailable = code === 'NoRoute' || code === 'NoSegment';
     throw new AppError(
       unavailable
-        ? `No ${travelModeLabel(mode).toLowerCase()} route is available between these places.`
-        : parsed.data.message || 'Routing failed. Try again.',
+        ? filtered
+          ? 'Toll ya highway ke bina koi rasta nahi mila.'
+          : `No ${travelModeLabel(mode).toLowerCase()} route is available between these places.`
+        : message || 'Routing failed. Try again.',
       'osrm',
     );
   }
-
-  return parsed.data.routes.map((route, index) => toRoute(route, index, mode));
+  return payload.routes.map((route, index) => ({ ...toRoute(route, index, mode), limitNote }));
 }
 
 function toRoute(route: z.infer<typeof routeSchema>, index: number, mode: TravelMode): RouteAlternative {
@@ -102,10 +167,10 @@ function toRoute(route: z.infer<typeof routeSchema>, index: number, mode: Travel
   return {
     id: `osrm-${mode}-${index}`,
     provider: 'osrm',
-    label: index === 0 ? 'Recommended' : `Alternative ${index}`,
+    label: index === 0 ? 'Ye rasta' : `Doosra ${index}`,
     distanceMeters: route.distance,
     durationSeconds: route.duration,
-    summary: summary || steps.find((step) => step.name)?.name || `${travelModeLabel(mode)} route`,
+    summary: summary || steps.find((step) => step.name)?.name || `${travelModeLabel(mode)} ka rasta`,
     geometry,
     steps,
     annotations:

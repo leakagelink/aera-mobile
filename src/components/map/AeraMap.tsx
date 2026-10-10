@@ -2,7 +2,7 @@ import { Camera, GeoJSONSource, Layer, Map, type CameraRef } from '@maplibre/map
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 
-import { lineCollection, namedPoints, pointFeature } from '@/components/map/geojson';
+import { lineCollection, namedPoints, pointFeature, trafficCollection } from '@/components/map/geojson';
 import { ErrorState } from '@/components/ui/States';
 import { mapStyleProvider } from '@/services/providers';
 import type { Coordinate } from '@/types/location';
@@ -17,6 +17,12 @@ export type MapRouteLine = {
   selected: boolean;
 };
 
+export type MapTrafficLine = {
+  id: string;
+  coordinates: Coordinate[];
+  level: 'clear' | 'slow' | 'heavy';
+};
+
 export type AeraMapHandle = {
   recenter: (longitude: number, latitude: number, zoom?: number, bearing?: number) => void;
   fit: (coordinates: Coordinate[]) => void;
@@ -25,40 +31,57 @@ export type AeraMapHandle = {
 type Props = {
   user?: Coordinate | null;
   origin?: Coordinate | null;
-  destination?: Coordinate | null;
+  destination?: (Coordinate & { name?: string }) | null;
   nearby?: Place[];
   routes?: MapRouteLine[];
+  traffic?: MapTrafficLine[];
   onUserGesture?: () => void;
 };
 
-export const AeraMap = forwardRef<AeraMapHandle, Props>(function AeraMap({ user, origin, destination, nearby = [], routes = [], onUserGesture }, ref) {
+export const AeraMap = forwardRef<AeraMapHandle, Props>(function AeraMap({ user, origin, destination, nearby = [], routes = [], traffic = [], onUserGesture }, ref) {
   const theme = useTheme();
   const reduced = usePrefersReducedMotion();
   const cameraRef = useRef<CameraRef>(null);
   const loadedRef = useRef(false);
   const centeredRef = useRef(false);
+  const pendingRef = useRef<{ kind: 'fit'; coordinates: Coordinate[] } | { kind: 'recenter'; longitude: number; latitude: number; zoom: number; bearing?: number } | null>(null);
   const userRef = useRef(user);
   userRef.current = user;
   const [attempt, setAttempt] = useState(0);
   const [failed, setFailed] = useState(false);
 
+  function moveCamera(longitude: number, latitude: number, zoom: number, bearing?: number) {
+    cameraRef.current?.easeTo({
+      center: [longitude, latitude],
+      zoom,
+      duration: reduced ? 0 : 450,
+      ...(typeof bearing === 'number' && Number.isFinite(bearing) ? { bearing } : {}),
+    });
+  }
+
+  function fitCamera(coordinates: Coordinate[]) {
+    const bounds = paddedBounds(coordinates);
+    if (!bounds) return;
+    cameraRef.current?.fitBounds(bounds, {
+      padding: { top: 140, right: 40, bottom: 260, left: 40 },
+      duration: reduced ? 0 : 550,
+    });
+  }
+
   useImperativeHandle(ref, () => ({
     recenter(longitude, latitude, zoom = 16, bearing) {
-      const duration = reduced ? 0 : 450;
-      cameraRef.current?.easeTo({
-        center: [longitude, latitude],
-        zoom,
-        duration,
-        ...(typeof bearing === 'number' && Number.isFinite(bearing) ? { bearing } : {}),
-      });
+      if (!loadedRef.current) {
+        pendingRef.current = { kind: 'recenter', longitude, latitude, zoom, bearing };
+        return;
+      }
+      moveCamera(longitude, latitude, zoom, bearing);
     },
     fit(coordinates) {
-      const bounds = paddedBounds(coordinates);
-      if (!bounds) return;
-      cameraRef.current?.fitBounds(bounds, {
-        padding: { top: 140, right: 40, bottom: 260, left: 40 },
-        duration: reduced ? 0 : 550,
-      });
+      if (!loadedRef.current) {
+        pendingRef.current = { kind: 'fit', coordinates };
+        return;
+      }
+      fitCamera(coordinates);
     },
   }));
 
@@ -85,6 +108,7 @@ export const AeraMap = forwardRef<AeraMapHandle, Props>(function AeraMap({ user,
   const alternatives = routes.filter((route) => !route.selected);
   const alternativeData = lineCollection(alternatives);
   const selectedData = lineCollection(selected);
+  const trafficData = trafficCollection(traffic);
   const nearbyData = namedPoints(nearby);
 
   return (
@@ -104,6 +128,18 @@ export const AeraMap = forwardRef<AeraMapHandle, Props>(function AeraMap({ user,
         onDidFinishLoadingMap={() => {
           loadedRef.current = true;
           setFailed(false);
+          const pending = pendingRef.current;
+          pendingRef.current = null;
+          if (pending?.kind === 'fit') {
+            centeredRef.current = true;
+            fitCamera(pending.coordinates);
+            return;
+          }
+          if (pending?.kind === 'recenter') {
+            centeredRef.current = true;
+            moveCamera(pending.longitude, pending.latitude, pending.zoom, pending.bearing);
+            return;
+          }
           const current = userRef.current;
           if (!current || centeredRef.current) return;
           centeredRef.current = true;
@@ -127,13 +163,26 @@ export const AeraMap = forwardRef<AeraMapHandle, Props>(function AeraMap({ user,
             <Layer
               id="route-selected-casing"
               type="line"
-              paint={{ 'line-color': theme.colors.routeCasing, 'line-width': 10 }}
+              paint={{ 'line-color': '#FFFFFF', 'line-width': 12, 'line-opacity': 0.95 }}
               layout={{ 'line-cap': 'round', 'line-join': 'round' }}
             />
             <Layer
               id="route-selected-line"
               type="line"
-              paint={{ 'line-color': theme.colors.primary, 'line-width': 5 }}
+              paint={{ 'line-color': '#0B6BFF', 'line-width': 7 }}
+              layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+            />
+          </GeoJSONSource>
+        ) : null}
+        {trafficData.features.length > 0 ? (
+          <GeoJSONSource id="route-traffic" data={trafficData}>
+            <Layer
+              id="route-traffic-line"
+              type="line"
+              paint={{
+                'line-color': ['match', ['get', 'level'], 'clear', '#1F8A4C', 'slow', '#D89A00', 'heavy', '#D64545', '#0B6BFF'],
+                'line-width': 7,
+              }}
               layout={{ 'line-cap': 'round', 'line-join': 'round' }}
             />
           </GeoJSONSource>
@@ -153,15 +202,32 @@ export const AeraMap = forwardRef<AeraMapHandle, Props>(function AeraMap({ user,
           </GeoJSONSource>
         ) : null}
         {destination ? (
-          <GeoJSONSource id="destination" data={pointFeature(destination)}>
+          <GeoJSONSource id="destination" data={namedPoints([{ name: destination.name?.trim() || 'Yahan jana hai', latitude: destination.latitude, longitude: destination.longitude }])}>
             <Layer
               id="destination-dot"
               type="circle"
               paint={{
-                'circle-radius': 8,
-                'circle-color': theme.colors.warning,
+                'circle-radius': 11,
+                'circle-color': '#E25B4A',
                 'circle-stroke-width': 3,
-                'circle-stroke-color': theme.colors.hero,
+                'circle-stroke-color': '#FFFFFF',
+              }}
+            />
+            <Layer
+              id="destination-label"
+              type="symbol"
+              layout={{
+                'text-field': ['get', 'name'],
+                'text-font': ['Noto Sans Regular'],
+                'text-size': 14,
+                'text-offset': [0, 1.1],
+                'text-anchor': 'top',
+                'text-max-width': 10,
+              }}
+              paint={{
+                'text-color': '#1A2230',
+                'text-halo-color': '#FFFFFF',
+                'text-halo-width': 2,
               }}
             />
           </GeoJSONSource>

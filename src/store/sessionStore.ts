@@ -9,12 +9,16 @@ type SessionState = {
   origin: Place | null;
   destination: Place | null;
   travelMode: TravelMode;
+  avoidTolls: boolean;
+  avoidHighways: boolean;
   routes: RouteAlternative[];
   selectedRouteId: string | null;
   completedTrip: Trip | null;
   setOrigin: (place: Place | null) => void;
   setDestination: (place: Place | null) => void;
   setTravelMode: (mode: TravelMode) => void;
+  setAvoidTolls: (avoid: boolean) => void;
+  setAvoidHighways: (avoid: boolean) => void;
   setRoutes: (routes: RouteAlternative[]) => void;
   selectRoute: (id: string) => void;
   setCompletedTrip: (trip: Trip | null) => void;
@@ -25,12 +29,16 @@ export const useSessionStore = create<SessionState>((set) => ({
   origin: null,
   destination: null,
   travelMode: 'car',
+  avoidTolls: false,
+  avoidHighways: false,
   routes: [],
   selectedRouteId: null,
   completedTrip: null,
   setOrigin: (origin) => set({ origin, routes: [], selectedRouteId: null }),
   setDestination: (destination) => set({ destination, routes: [], selectedRouteId: null }),
   setTravelMode: (travelMode) => set({ travelMode, routes: [], selectedRouteId: null }),
+  setAvoidTolls: (avoidTolls) => set({ avoidTolls, routes: [], selectedRouteId: null }),
+  setAvoidHighways: (avoidHighways) => set({ avoidHighways, routes: [], selectedRouteId: null }),
   setRoutes: (routes) =>
     set((state) => {
       const selectedStillThere = routes.some((route) => route.id === state.selectedRouteId);

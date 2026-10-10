@@ -16,19 +16,19 @@ export function LocationStatus({ recording = false }: Props) {
   const accuracy = useLocationStore((state) => state.current?.accuracy ?? null);
   const watching = useLocationStore((state) => state.watching);
 
-  let label = 'Location off';
+  let label = 'Location band';
   let color: string = theme.colors.mutedForeground;
   if (recording) {
-    label = 'Trip recording on';
+    label = 'Trip record ho rahi hai';
     color = theme.colors.error;
   } else if (permission === 'denied') {
-    label = 'Location denied';
+    label = 'Location mana hai';
     color = theme.colors.error;
   } else if (availability === 'unavailable') {
-    label = 'GPS unavailable';
+    label = 'GPS nahi mil raha';
     color = theme.colors.warning;
   } else if (watching && accuracy === null) {
-    label = 'Finding location';
+    label = 'Jagah dhoondh raha hoon';
     color = theme.colors.warning;
   } else if (permission === 'granted') {
     label = accuracy !== null && accuracy > 30 ? `Location on · ±${Math.round(accuracy)} m` : 'Location on';

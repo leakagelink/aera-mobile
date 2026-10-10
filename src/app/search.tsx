@@ -49,9 +49,9 @@ export default function SearchScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
-      <ScreenHeader title={field === 'origin' ? 'From' : 'Where to'} onBack={() => router.back()} />
+      <ScreenHeader title={field === 'origin' ? 'Yahan se' : 'Kahan jana hai'} onBack={() => router.back()} />
       <View style={styles.search}>
-        <SearchBar value={query} onChangeText={setQuery} placeholder={field === 'origin' ? 'Search a start place' : 'Search a destination'} autoFocus />
+        <SearchBar value={query} onChangeText={setQuery} placeholder={field === 'origin' ? 'Shuru ki jagah dhoondo' : 'Manzil dhoondo'} autoFocus />
       </View>
       <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
         {field === 'origin' ? (
@@ -61,19 +61,19 @@ export default function SearchScreen() {
             </View>
             <View style={styles.copy}>
               <AppText size={15} weight="semibold">
-                Your location
+                Aapki jagah
               </AppText>
               <AppText size={12} color={theme.colors.mutedForeground} numberOfLines={1}>
-                Start from where you are now
+                Jahan abhi ho, wahan se shuru
               </AppText>
             </View>
           </Pressable>
         ) : null}
         {!showResults ? (
-          <Section title="Recent">
+          <Section title="Haal ki jagah">
             {recent.length === 0 ? (
               <AppText size={14} color={theme.colors.mutedForeground}>
-                Places you choose will appear here.
+                Jo jagah chunoge, yahan dikhegi.
               </AppText>
             ) : (
               recent.map((place) => (
@@ -82,12 +82,12 @@ export default function SearchScreen() {
             )}
           </Section>
         ) : null}
-        {showResults && search.isFetching && !search.data ? <LoadingState title="Searching" message="Looking up places." /> : null}
+        {showResults && search.isFetching && !search.data ? <LoadingState title="Dhoondh raha hoon" message="Jagah nikal raha hoon." /> : null}
         {showResults && search.isError ? (
-          <ErrorState title="Search failed" message={errorMessage(search.error)} actionLabel="Try again" onAction={() => void search.refetch()} />
+          <ErrorState title="Search nahi hui" message={errorMessage(search.error)} actionLabel="Dobara" onAction={() => void search.refetch()} />
         ) : null}
         {showResults && search.isSuccess && search.data.length === 0 ? (
-          <ErrorState title="No places found" message="Try a more specific name, city, or address." />
+          <ErrorState title="Jagah nahi mili" message="Naam, sheher, ya pata aur saaf likho." />
         ) : null}
         {showResults && search.data
           ? search.data.map((place) => (
@@ -168,9 +168,9 @@ function PlaceRow({
         </AppText>
       ) : null}
       {onSave ? (
-        <Pressable accessibilityRole="button" accessibilityLabel={`Save ${place.name}`} onPress={onSave} hitSlop={8}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`${place.name} save karo`} onPress={onSave} hitSlop={8}>
           <AppText size={12} weight="semibold" color={theme.colors.primary}>
-            Save
+            Bachao
           </AppText>
         </Pressable>
       ) : null}

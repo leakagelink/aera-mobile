@@ -19,7 +19,7 @@ export function hasArrived(remainingMeters: number, offRoute: boolean, accuracy:
 }
 
 export function gpsWarning(accuracy: number | null, locationAgeMs: number): string | null {
-  if (locationAgeMs > 15_000) return 'GPS signal lost. Waiting for a new location.';
-  if (accuracy !== null && accuracy > 80) return 'GPS accuracy is low. Your position on the route may be approximate.';
+  if (locationAgeMs > 15_000) return 'GPS signal nahi mil raha. Nayi location ka intezaar hai.';
+  if (accuracy !== null && accuracy > 80) return 'GPS kamzor hai. Map par jagah thodi hil sakti hai.';
   return null;
 }

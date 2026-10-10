@@ -31,7 +31,7 @@ export default function SignInScreen() {
       void registerArahNotifications().catch(() => undefined);
       router.replace('/');
     } catch (caught) {
-      setError(errorMessage(caught, 'Sign-in failed. Try again.'));
+      setError(errorMessage(caught, 'Sign in nahi hua. Dobara try karo.'));
     } finally {
       setPending(false);
     }
@@ -41,10 +41,10 @@ export default function SignInScreen() {
     <KeyboardAvoidingView style={[styles.screen, { backgroundColor: theme.colors.background, paddingTop: insets.top + 28 }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.content}>
         <AppText size={34} weight="semibold">
-          Talk to your map
+          Map se baat karo
         </AppText>
         <AppText size={15} color={theme.colors.mutedForeground} style={styles.copy}>
-          {mode === 'login' ? 'Sign in with your Arah account.' : 'Create an Arah account. Use a password of at least 10 characters.'}
+          {mode === 'login' ? 'Apne Arah account se sign in karo.' : 'Naya Arah account banao. Password kam se kam 10 akshar ka ho.'}
         </AppText>
         <TextInput
           value={email}
@@ -68,7 +68,7 @@ export default function SignInScreen() {
         />
         {error ? <AppText size={14}>{error}</AppText> : null}
         <PrimaryButton disabled={pending || email.trim().length === 0 || password.length < 10} onPress={() => void submit()}>
-          {pending ? 'Please wait' : mode === 'login' ? 'Sign in' : 'Create account'}
+          {pending ? 'Ruko' : mode === 'login' ? 'Sign in' : 'Account banao'}
         </PrimaryButton>
         <PrimaryButton
           disabled={pending}
@@ -83,14 +83,14 @@ export default function SignInScreen() {
                 void registerArahNotifications().catch(() => undefined);
                 router.replace('/');
               } catch (caught) {
-                setError(errorMessage(caught, 'Google sign-in failed. Try again.'));
+                setError(errorMessage(caught, 'Google sign in nahi hua. Dobara try karo.'));
               } finally {
                 setPending(false);
               }
             })();
           }}
         >
-          Continue with Google
+          Google se aage badho
         </PrimaryButton>
         <PrimaryButton
           disabled={pending}
@@ -99,7 +99,7 @@ export default function SignInScreen() {
             setError(null);
           }}
         >
-          {mode === 'login' ? 'Need an account?' : 'Already have an account?'}
+          {mode === 'login' ? 'Account chahiye?' : 'Pehle se account hai?'}
         </PrimaryButton>
         <View style={styles.policies}>
           <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(arahPolicyUrls.privacy)}>
@@ -109,7 +109,7 @@ export default function SignInScreen() {
           </Pressable>
           <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(arahPolicyUrls.terms)}>
             <AppText size={13} color={theme.colors.mutedForeground}>
-              Terms of use
+              Terms
             </AppText>
           </Pressable>
         </View>

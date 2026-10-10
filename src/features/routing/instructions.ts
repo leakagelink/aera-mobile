@@ -1,39 +1,48 @@
 export function instructionFor(type: string, modifier: string | undefined, name: string | undefined): string {
   const road = name?.trim();
-  const onto = road ? ` onto ${road}` : '';
-  const direction = modifier ? modifier.replace(/-/g, ' ') : '';
+  const par = road ? `, ${road} par` : '';
+  const turn = turnLabel(modifier);
 
   switch (type) {
     case 'depart':
-      return road ? `Head onto ${road}` : 'Head out';
+      return road ? `${road} par nikalna` : 'Seedha nikalna';
     case 'arrive':
-      return road ? `Arrive at ${road}` : 'You have arrived';
+      return road ? `${road} par pahunch gaye` : 'Pahunch gaye';
     case 'turn':
     case 'end of road':
-      return direction ? `${capitalize(direction)}${onto}` : `Continue${onto}`;
+      return `${turn}${par}`;
     case 'new name':
     case 'continue':
-      return road ? `Continue onto ${road}` : 'Continue straight';
+      return road ? `Seedha, ${road} par` : 'Seedha chalte raho';
     case 'merge':
-      return `Merge${onto}`;
+      return `Merge hona${par}`;
     case 'on ramp':
-      return `Take the ramp${onto}`;
+      return `Ramp lena${par}`;
     case 'off ramp':
-      return `Take the exit${onto}`;
+      return `Exit lena${par}`;
     case 'fork':
-      return direction ? `Keep ${direction}${onto}` : `Keep ahead${onto}`;
+      return `${turn === 'Seedha' ? 'Apni side rakhna' : turn}${par}`;
     case 'roundabout':
     case 'rotary':
     case 'roundabout turn':
-      return road ? `Enter the roundabout and take ${road}` : 'Enter the roundabout';
+      return road ? `Gol chakkar lena, ${road}` : 'Gol chakkar lena';
     case 'exit roundabout':
     case 'exit rotary':
-      return `Exit the roundabout${onto}`;
+      return `Gol chakkar se nikalna${par}`;
     default:
-      return road ? `Continue onto ${road}` : 'Continue';
+      return road ? `Seedha, ${road} par` : 'Seedha';
   }
 }
 
-function capitalize(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
+function turnLabel(modifier: string | undefined): string {
+  const mod = (modifier ?? '').toLowerCase().replace(/-/g, ' ');
+  if (!mod) return 'Seedha';
+  if (mod.includes('uturn')) return 'Wapas mudna';
+  if (mod.includes('slight') && mod.includes('left')) return 'Thoda left';
+  if (mod.includes('slight') && mod.includes('right')) return 'Thoda right';
+  if (mod.includes('sharp') && mod.includes('left')) return 'Tez left';
+  if (mod.includes('sharp') && mod.includes('right')) return 'Tez right';
+  if (mod.includes('left')) return 'Left';
+  if (mod.includes('right')) return 'Right';
+  return 'Seedha';
 }

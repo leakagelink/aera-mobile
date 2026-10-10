@@ -107,7 +107,7 @@ export function HomeVoice() {
       ) : null}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={recording ? 'Stop talking' : 'Talk to Arah'}
+        accessibilityLabel={recording ? 'Bolna band karo' : 'Arah se bolo'}
         disabled={pending && !recording}
         onPress={() => void toggleMic()}
         style={[styles.button, { backgroundColor: recording ? theme.colors.primary : theme.colors.nav, borderColor: theme.colors.glassBorder }]}

@@ -16,7 +16,7 @@ import { useTheme } from '@/theme/useTheme';
 import { formatDistance, formatDuration } from '@/utils/format';
 import { errorMessage } from '@/utils/errors';
 
-const prompts = ['Nearest hospital', 'Nearest petrol pump', 'Weather here', 'Mujhe kahin ghoomne jaana hai'];
+const prompts = ['Sabse paas aspatal', 'Sabse paas petrol pump', 'Yahan mausam', 'Mujhe kahin ghoomne jaana hai'];
 
 type TranscriptItem = AiChatTurn & { activities?: string[]; cards?: AiCard[] };
 
@@ -61,7 +61,7 @@ export default function AiScreen() {
       const result = await sendAiChat(message, history);
       setItems((current) => [...current, { role: 'assistant', text: result.message, activities: result.toolCalls.map((call) => call.activity), cards: result.cards }]);
     } catch (caught) {
-      setError(errorMessage(caught, 'The assistant is unavailable. Try again.'));
+      setError(errorMessage(caught, 'Assistant abhi nahi chal raha. Dobara try karo.'));
     } finally {
       setPending(false);
     }
@@ -74,11 +74,11 @@ export default function AiScreen() {
       await recorder.stop();
       const uri = recorder.uri;
       if (!uri) {
-        setVoiceNote('The recording was empty.');
+        setVoiceNote('Recording khali thi.');
         return;
       }
       setPending(true);
-      setVoiceNote('Transcribing...');
+      setVoiceNote('Likh raha hoon...');
       try {
         const text = await transcribeSpeech(await readAudioBase64(uri), 'audio/mp4');
         setVoiceNote(null);
@@ -86,24 +86,24 @@ export default function AiScreen() {
         await submit(text);
       } catch (caught) {
         setPending(false);
-        setVoiceNote(errorMessage(caught, 'Voice is unavailable. You can still type.'));
+        setVoiceNote(errorMessage(caught, 'Awaaz abhi nahi hai. Likh kar pooch sakte ho.'));
       }
       return;
     }
     const permission = await requestRecordingPermissionsAsync();
     if (!permission.granted) {
-      setVoiceNote('Microphone permission is off. You can still type.');
+      setVoiceNote('Microphone band hai. Likh kar pooch sakte ho.');
       return;
     }
     await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true });
     await recorder.prepareToRecordAsync();
     recorder.record();
-    setVoiceNote('Listening... tap Stop when you are done.');
+    setVoiceNote('Bolo... phir Stop dabao.');
     setRecording(true);
   }
 
   async function playReply(text: string) {
-    setVoiceNote('Preparing voice...');
+    setVoiceNote('Awaaz taiyar ho rahi hai...');
     try {
       player.current?.pause();
       player.current?.release();
@@ -113,7 +113,7 @@ export default function AiScreen() {
       next.play();
       setVoiceNote(null);
     } catch (caught) {
-      setVoiceNote(errorMessage(caught, 'Voice is not configured. Add the ElevenLabs key in the admin panel.'));
+      setVoiceNote(errorMessage(caught, 'Awaaz ke liye admin mein ElevenLabs key chahiye.'));
     }
   }
 
@@ -129,10 +129,10 @@ export default function AiScreen() {
     <KeyboardAvoidingView style={[styles.screen, { backgroundColor: theme.colors.background }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + 28, paddingBottom: 24 }]} keyboardShouldPersistTaps="handled">
         <AppText size={34} weight="semibold">
-          Talk to your map
+          Map se baat karo
         </AppText>
         <AppText size={15} color={theme.colors.mutedForeground} style={styles.copy}>
-          Talk about the trip, a nearby place, or something ordinary. Arah answers in your language and only uses real map data.
+          Trip, paas ki jagah, ya kuch aur poochho. Arah aapki boli mein jawab deta hai, aur sirf asli map data use karta hai.
         </AppText>
         <View style={styles.prompts}>
           {prompts.map((prompt) => (
@@ -152,7 +152,7 @@ export default function AiScreen() {
         {items.map((item, index) => (
           <GlassCard key={`${item.role}-${index}`} padded style={styles.card}>
             <AppText size={12} color={theme.colors.mutedForeground}>
-              {item.role === 'user' ? 'You' : 'Arah'}
+              {item.role === 'user' ? 'Aap' : 'Arah'}
             </AppText>
             {item.activities?.map((activity) => (
               <AppText key={activity} size={13} color={theme.colors.mutedForeground} style={styles.activity}>
@@ -181,7 +181,7 @@ export default function AiScreen() {
                     {card.summary}
                   </AppText>
                   <AppText size={12} color={theme.colors.mutedForeground}>
-                    {formatDistance(card.distanceMeters, units)} · {formatDuration(card.durationSeconds)} · Open route
+                    {formatDistance(card.distanceMeters, units)} · {formatDuration(card.durationSeconds)} · Rasta kholo
                   </AppText>
                 </Pressable>
               ),
@@ -189,7 +189,7 @@ export default function AiScreen() {
             {item.role === 'assistant' ? (
               <Pressable accessibilityRole="button" onPress={() => void playReply(item.text)} style={styles.cardAction}>
                 <AppText size={13} weight="semibold" color={theme.colors.primary}>
-                  Play reply
+                  Jawab suno
                 </AppText>
               </Pressable>
             ) : null}
@@ -202,14 +202,14 @@ export default function AiScreen() {
         ) : null}
         {pending ? (
           <AppText size={14} color={theme.colors.mutedForeground} style={styles.status}>
-            Thinking...
+            Soch raha hoon...
           </AppText>
         ) : null}
         {error ? (
           <GlassCard padded style={styles.card}>
             <AppText size={14}>{error}</AppText>
             <PrimaryButton style={styles.retry} onPress={() => void submit(items.filter((item) => item.role === 'user').at(-1)?.text ?? '')}>
-              Try again
+              Dobara
             </PrimaryButton>
           </GlassCard>
         ) : null}
@@ -218,7 +218,7 @@ export default function AiScreen() {
         <TextInput
           value={draft}
           onChangeText={setDraft}
-          placeholder="Ask Arah"
+          placeholder="Arah se poochho"
           placeholderTextColor={theme.colors.mutedForeground}
           editable={!pending}
           style={[styles.input, { color: theme.colors.foreground, backgroundColor: theme.colors.nav, borderColor: `${theme.colors.primary}66`, fontFamily: font.medium }]}
@@ -226,10 +226,10 @@ export default function AiScreen() {
         />
         <View style={styles.actions}>
           <PrimaryButton disabled={pending} onPress={() => void toggleMic()}>
-            {recording ? 'Stop' : 'Talk'}
+            {recording ? 'Stop' : 'Bolo'}
           </PrimaryButton>
           <PrimaryButton disabled={pending || recording || draft.trim().length === 0} onPress={() => void submit(draft)}>
-            Send
+            Bhejo
           </PrimaryButton>
         </View>
       </View>

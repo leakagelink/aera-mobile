@@ -31,15 +31,15 @@ export default function ProfileScreen() {
   const token = useAccountStore((state) => state.token);
 
   function confirmDeleteAccount() {
-    Alert.alert('Delete Arah account?', 'This removes the account on the Arah server and the trip history on this phone. It cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert('Arah account mita dein?', 'Server wala account aur is phone ki trip list hat jayegi. Wapas nahi aayegi.', [
+      { text: 'Rehne do', style: 'cancel' },
       {
-        text: 'Delete account',
+        text: 'Account mitao',
         style: 'destructive',
         onPress: () => {
           void deleteArahAccount()
-            .then(() => Alert.alert('Account deleted', 'The Arah account and the trip history on this phone have been removed.'))
-            .catch((caught: unknown) => Alert.alert('Account was not deleted', errorMessage(caught, 'Try again.')));
+            .then(() => Alert.alert('Account mit gaya', 'Arah account aur is phone ki trip list hat gayi.'))
+            .catch((caught: unknown) => Alert.alert('Account nahi mita', errorMessage(caught, 'Dobara try karo.')));
         },
       },
     ]);
@@ -59,25 +59,25 @@ export default function ProfileScreen() {
             {email && token ? email : 'Arah'}
           </AppText>
           <AppText size={14} color={theme.colors.mutedForeground} style={styles.subtitle}>
-            {email && token ? 'Signed in. Trip history stays on this phone.' : 'Trip history stays on this phone.'}
+            {email && token ? 'Sign in hai. Safar is phone par rehta hai.' : 'Safar is phone par rehta hai.'}
           </AppText>
         </View>
       </View>
       <View style={[styles.column, { maxWidth: maxContent, paddingHorizontal: gutter }]}>
         <MetricGrid style={styles.metrics}>
-          <MetricCard label="Distance" value={formatDistance(distance, units)} />
-          <MetricCard label="Trips" value={String(trips.length)} />
+          <MetricCard label="Doori" value={formatDistance(distance, units)} />
+          <MetricCard label="Safar" value={String(trips.length)} />
           <MetricCard label="Time" value={formatDuration(duration)} />
           <MetricCard label="Average" value={formatDistance(average, units)} />
         </MetricGrid>
       <View style={[styles.list, { backgroundColor: theme.colors.surface }]}>
-        <Row icon={History} label="Trip history" onPress={() => router.push('/trips')} />
+        <Row icon={History} label="Safar ki list" onPress={() => router.push('/trips')} />
         <Row icon={ShieldCheck} label="Privacy" onPress={() => router.push('/privacy')} />
         <Row icon={Info} label="Privacy policy" onPress={() => void Linking.openURL(arahPolicyUrls.privacy)} />
-        <Row icon={Info} label="Terms of use" onPress={() => void Linking.openURL(arahPolicyUrls.terms)} />
-        <Row icon={MapPin} label="Location access" onPress={() => router.push('/permission')} />
-        <Row icon={Settings2} label="Settings" onPress={() => router.push('/settings')} />
-        {token ? <Row icon={UserRound} label="Delete account" onPress={confirmDeleteAccount} /> : null}
+        <Row icon={Info} label="Terms" onPress={() => void Linking.openURL(arahPolicyUrls.terms)} />
+        <Row icon={MapPin} label="Location" onPress={() => router.push('/permission')} />
+        <Row icon={Settings2} label="Setting" onPress={() => router.push('/settings')} />
+        {token ? <Row icon={UserRound} label="Account mitao" onPress={confirmDeleteAccount} /> : null}
       </View>
       </View>
     </ScrollView>

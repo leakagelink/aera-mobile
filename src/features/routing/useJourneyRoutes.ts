@@ -12,12 +12,14 @@ export function useJourneyRoutes(enabled: boolean) {
   const destination = useSessionStore((state) => state.destination);
   const originPlace = useSessionStore((state) => state.origin);
   const travelMode = useSessionStore((state) => state.travelMode);
+  const avoidTolls = useSessionStore((state) => state.avoidTolls);
+  const avoidHighways = useSessionStore((state) => state.avoidHighways);
   const location = useLocationStore((state) => state.current);
   const setRoutes = useSessionStore((state) => state.setRoutes);
   const origin = originPlace ? stableCoordinate(originPlace) : location ? stableCoordinate(location) : null;
 
   const query = useQuery({
-    queryKey: ['route', travelMode, destination?.id, originPlace?.id ?? 'here', origin?.latitude, origin?.longitude],
+    queryKey: ['route', travelMode, avoidTolls, avoidHighways, destination?.id, originPlace?.id ?? 'here', origin?.latitude, origin?.longitude],
     enabled: enabled && destination !== null && origin !== null,
     staleTime: 120_000,
     refetchOnMount: false,
@@ -29,7 +31,10 @@ export function useJourneyRoutes(enabled: boolean) {
       if (distanceMeters(start, place) < 25) {
         throw new AppError('Choose a destination farther from the start.', 'invalid');
       }
-      return routingProvider().calculateRoute(start, place, signal, session.travelMode);
+      return routingProvider().calculateRoute(start, place, signal, session.travelMode, {
+        avoidTolls: session.avoidTolls,
+        avoidHighways: session.avoidHighways,
+      });
     },
   });
 
@@ -37,9 +42,10 @@ export function useJourneyRoutes(enabled: boolean) {
     if (!query.data || !destination) return;
     const session = useSessionStore.getState();
     if (session.destination?.id !== destination.id || session.travelMode !== travelMode) return;
+    if (session.avoidTolls !== avoidTolls || session.avoidHighways !== avoidHighways) return;
     if ((session.origin?.id ?? null) !== (originPlace?.id ?? null)) return;
     setRoutes(query.data);
-  }, [query.data, destination, originPlace?.id, setRoutes, travelMode]);
+  }, [avoidHighways, avoidTolls, query.data, destination, originPlace?.id, setRoutes, travelMode]);
 
   return query;
 }

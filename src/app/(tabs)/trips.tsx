@@ -13,10 +13,10 @@ import { useTheme } from '@/theme/useTheme';
 import { formatClock, formatDay, formatDistance, formatDuration, withinFilter } from '@/utils/format';
 
 const filters = [
-  { id: 'today', label: 'Today' },
-  { id: 'week', label: 'Week' },
-  { id: 'month', label: 'Month' },
-  { id: 'all', label: 'All' },
+  { id: 'today', label: 'Aaj' },
+  { id: 'week', label: 'Hafta' },
+  { id: 'month', label: 'Mahina' },
+  { id: 'all', label: 'Sab' },
 ] as const;
 
 export default function TripsScreen() {
@@ -48,10 +48,10 @@ export default function TripsScreen() {
   return (
     <ScrollView style={{ backgroundColor: theme.colors.background }} contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 120, paddingHorizontal: 20 }}>
       <AppText size={34} weight="semibold">
-        Your journeys
+        Aapke safar
       </AppText>
       <AppText size={14} color={theme.colors.mutedForeground} style={styles.subtitle}>
-        Trips you start are stored on this device.
+        Jo trip aap shuru karte ho, woh is phone par rehti hai.
       </AppText>
       <View style={[styles.filters, { backgroundColor: theme.colors.secondary }]}>
         {filters.map((item) => {
@@ -66,8 +66,8 @@ export default function TripsScreen() {
         })}
       </View>
       <View style={styles.metrics}>
-        <MetricCard compact label="Distance" value={formatDistance(distance, units)} />
-        <MetricCard compact label="Travel time" value={formatDuration(duration)} />
+        <MetricCard compact label="Doori" value={formatDistance(distance, units)} />
+        <MetricCard compact label="Time" value={formatDuration(duration)} />
       </View>
       {compared.length === 2 ? (
         <View style={styles.compare}>
@@ -75,22 +75,22 @@ export default function TripsScreen() {
             {compared[0].destinationName} vs {compared[1].destinationName}
           </AppText>
           <AppText size={14} color={theme.colors.mutedForeground}>
-            {`${formatDistance(Math.abs(compared[0].distanceMeters - compared[1].distanceMeters), units)} apart in distance · ${formatDuration(Math.abs(compared[0].durationSeconds - compared[1].durationSeconds))} apart in time`}
+            {`${formatDistance(Math.abs(compared[0].distanceMeters - compared[1].distanceMeters), units)} doori ka farq · ${formatDuration(Math.abs(compared[0].durationSeconds - compared[1].durationSeconds))} time ka farq`}
           </AppText>
         </View>
       ) : visible.length >= 2 ? (
         <AppText size={13} color={theme.colors.mutedForeground} style={styles.subtitle}>
-          Open a trip, or tap Select on two trips to compare them.
+          Trip kholo, ya do trip chunne ke liye Chuno dabao.
         </AppText>
       ) : null}
-      {!ready ? <AppText color={theme.colors.mutedForeground}>Loading trips…</AppText> : null}
+      {!ready ? <AppText color={theme.colors.mutedForeground}>Safar load ho rahe hain…</AppText> : null}
       {ready && visible.length === 0 ? (
         <View style={styles.empty}>
           <AppText size={18} weight="semibold">
-            No trips yet
+            Abhi koi safar nahi
           </AppText>
           <AppText size={14} color={theme.colors.mutedForeground} style={styles.emptyCopy}>
-            Start navigation from the map. Arah records the trip only after you choose to begin.
+            Map se navigation chalu karo. Trip tabhi record hoti hai jab aap shuru karte ho.
           </AppText>
         </View>
       ) : null}
@@ -103,7 +103,7 @@ export default function TripsScreen() {
             <TripCard
               key={trip.id}
               title={`${trip.originName} → ${trip.destinationName}`}
-              detail={`${formatDistance(trip.distanceMeters, units)} · ${formatDuration(trip.durationSeconds)} · ${formatClock(trip.startedAt)}${trip.recovered ? ' · recovered' : ''}`}
+              detail={`${formatDistance(trip.distanceMeters, units)} · ${formatDuration(trip.durationSeconds)} · ${formatClock(trip.startedAt)}${trip.recovered ? ' · wapas mili' : ''}`}
               onPress={() => router.push({ pathname: '/trip/[id]', params: { id: trip.id } })}
               selected={compareIds.includes(trip.id)}
               onSelect={() =>

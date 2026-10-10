@@ -9,8 +9,8 @@ import { useTheme } from '@/theme/useTheme';
 
 const items: { name: string; label: string; icon: LucideIcon }[] = [
   { name: 'map', label: 'Map', icon: Map },
-  { name: 'trips', label: 'Trips', icon: Route },
-  { name: 'ai', label: 'AI', icon: MessageCircle },
+  { name: 'trips', label: 'Safar', icon: Route },
+  { name: 'ai', label: 'Bolo', icon: MessageCircle },
   { name: 'profile', label: 'Profile', icon: UserRound },
 ];
 

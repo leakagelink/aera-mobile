@@ -36,7 +36,7 @@ export default function TripDetailScreen() {
   if (!trip) {
     return (
       <View style={[styles.fill, { backgroundColor: theme.colors.background }]}>
-        <ErrorState title="Trip not found" message="That journey is not in the local history." actionLabel="Back" onAction={() => router.back()} />
+        <ErrorState title="Safar nahi mila" message="Ye safar is phone ki list mein nahi hai." actionLabel="Wapas" onAction={() => router.back()} />
       </View>
     );
   }
@@ -65,27 +65,27 @@ export default function TripDetailScreen() {
           />
         </View>
         <MetricGrid style={{ marginTop: 16, paddingHorizontal: gutter }}>
-          <MetricCard label="Distance" value={formatDistance(trip.distanceMeters, units)} />
-          <MetricCard label="Duration" value={formatDuration(trip.durationSeconds)} />
+          <MetricCard label="Doori" value={formatDistance(trip.distanceMeters, units)} />
+          <MetricCard label="Time" value={formatDuration(trip.durationSeconds)} />
           <MetricCard label="Average speed" value={formatSpeed(trip.averageSpeedMps, units)} unit={speedUnit(units)} />
-          <MetricCard label="Max speed" value={formatSpeed(trip.maxSpeedMps, units)} unit={speedUnit(units)} />
-          {trip.movingTimeSeconds !== undefined ? <MetricCard label="Moving" value={formatDuration(trip.movingTimeSeconds)} /> : null}
-          {trip.stoppedTimeSeconds !== undefined ? <MetricCard label="Stopped" value={formatDuration(trip.stoppedTimeSeconds)} /> : null}
+          <MetricCard label="Sabse tez" value={formatSpeed(trip.maxSpeedMps, units)} unit={speedUnit(units)} />
+          {trip.movingTimeSeconds !== undefined ? <MetricCard label="Chalte" value={formatDuration(trip.movingTimeSeconds)} /> : null}
+          {trip.stoppedTimeSeconds !== undefined ? <MetricCard label="Ruke" value={formatDuration(trip.stoppedTimeSeconds)} /> : null}
         </MetricGrid>
         <View style={[styles.summary, { backgroundColor: theme.colors.surface, marginHorizontal: gutter }]}>
           <AppText size={16} weight="semibold">
-            Route summary
+            Rasta
           </AppText>
           <AppText size={14} color={theme.colors.mutedForeground} style={styles.copy}>
             {trip.routeSummary}
           </AppText>
           <AppText size={13} style={styles.copy}>
-            Started {formatClock(trip.startedAt)} · Ended {formatClock(trip.endedAt)}
+            Shuru {formatClock(trip.startedAt)} · Khatam {formatClock(trip.endedAt)}
           </AppText>
           <AppText size={13} color={theme.colors.mutedForeground} style={styles.copy}>
-            {trip.sampleCount} location samples
-            {trip.routeProgress !== undefined ? ` · ${Math.round(trip.routeProgress * 100)}% of the planned route` : ''}
-            {trip.recovered ? ' · saved after the app closed' : ''}
+            {trip.sampleCount} location ke nishaan
+            {trip.routeProgress !== undefined ? ` · planned raste ka ${Math.round(trip.routeProgress * 100)}%` : ''}
+            {trip.recovered ? ' · app band hone ke baad save hua' : ''}
           </AppText>
         </View>
       </View>

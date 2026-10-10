@@ -70,32 +70,63 @@ function toPlace(row: z.infer<typeof resultSchema>): Place | null {
   };
 }
 
-export async function searchPlaces(query: string, signal?: AbortSignal): Promise<Place[]> {
+const LOCAL_SEARCH_RADIUS_M = 50_000;
+
+export async function searchPlaces(query: string, signal?: AbortSignal, near?: Coordinate): Promise<Place[]> {
   const trimmed = query.trim();
   if (trimmed.length < 2) return [];
-
-  const key = trimmed.toLowerCase();
+  const origin = near && isValidCoordinate(near.latitude, near.longitude) ? near : undefined;
+  const area = origin ? `${origin.latitude.toFixed(2)},${origin.longitude.toFixed(2)}` : 'any';
+  const key = `${area}:${trimmed.toLowerCase()}`;
   const cached = cache.get(key);
   if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.places;
 
+  const local = origin ? await fetchSearch(trimmed, signal, origin, true) : [];
+  if (signal?.aborted) return local;
+  const wider = await fetchSearch(trimmed, signal, origin, false);
+  const places = origin ? rankByNearness(local, wider, origin) : wider;
+  cache.set(key, { at: Date.now(), places });
+  return places;
+}
+
+async function fetchSearch(query: string, signal: AbortSignal | undefined, near: Coordinate | undefined, bounded: boolean): Promise<Place[]> {
   const url = new URL('/search', env.geocodingBaseUrl);
-  url.searchParams.set('q', trimmed);
+  url.searchParams.set('q', query);
   url.searchParams.set('format', 'jsonv2');
   url.searchParams.set('addressdetails', '1');
-  url.searchParams.set('limit', '6');
+  url.searchParams.set('limit', bounded ? '6' : '8');
+  if (near) {
+    url.searchParams.set('viewbox', nearbyViewbox(near, LOCAL_SEARCH_RADIUS_M));
+    if (bounded) url.searchParams.set('bounded', '1');
+  }
 
   const payload = await schedule(() => requestJson(url.toString(), { headers: headers(), signal }));
   const parsed = searchSchema.safeParse(payload);
   if (!parsed.success) {
     throw new AppError('Place search returned an unexpected response.', 'nominatim');
   }
-
-  const places = parsed.data.flatMap((row) => {
+  return parsed.data.flatMap((row) => {
     const place = toPlace(row);
     return place ? [place] : [];
   });
-  cache.set(key, { at: Date.now(), places });
-  return places;
+}
+
+function rankByNearness(local: Place[], wider: Place[], near: Coordinate): Place[] {
+  const seen = new Set<string>();
+  const unique: Place[] = [];
+  for (const place of [...local, ...wider]) {
+    if (seen.has(place.id)) continue;
+    seen.add(place.id);
+    unique.push(place);
+  }
+  const nearby: Place[] = [];
+  const rest: Place[] = [];
+  for (const place of unique) {
+    if (distanceMeters(near, place) <= LOCAL_SEARCH_RADIUS_M) nearby.push(place);
+    else rest.push(place);
+  }
+  const byDistance = (left: Place, right: Place) => distanceMeters(near, left) - distanceMeters(near, right);
+  return [...nearby.sort(byDistance), ...rest.sort(byDistance)].slice(0, 8);
 }
 
 export async function reverseGeocode(coordinate: Coordinate, signal?: AbortSignal): Promise<Place | null> {

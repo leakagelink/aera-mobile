@@ -32,7 +32,7 @@ export function NavigationInstruction({ instruction, distance, following, modifi
           </AppText>
           {following ? (
             <AppText size={12} color={theme.colors.mutedForeground} numberOfLines={1}>
-              Then {following}
+              Phir {following}
             </AppText>
           ) : null}
         </View>

@@ -1,6 +1,6 @@
 import type { Coordinate } from '@/types/location';
 import type { Place } from '@/types/place';
-import type { MatchedTrace, NearestRoad, RouteAlternative } from '@/types/route';
+import type { MatchedTrace, NearestRoad, RouteAlternative, RouteLimits } from '@/types/route';
 import type { TrafficReport } from '@/types/traffic';
 import type { TravelMode } from '@/types/travel';
 
@@ -11,7 +11,7 @@ export interface MapStyleProvider {
 
 export interface PlaceSearchProvider {
   readonly id: string;
-  search(query: string, signal?: AbortSignal): Promise<Place[]>;
+  search(query: string, signal?: AbortSignal, near?: Coordinate): Promise<Place[]>;
 }
 
 export interface GeocodingProvider {
@@ -21,7 +21,7 @@ export interface GeocodingProvider {
 
 export interface RoutingProvider {
   readonly id: string;
-  calculateRoute(origin: Coordinate, destination: Coordinate, signal?: AbortSignal, mode?: TravelMode): Promise<RouteAlternative[]>;
+  calculateRoute(origin: Coordinate, destination: Coordinate, signal?: AbortSignal, mode?: TravelMode, limits?: RouteLimits): Promise<RouteAlternative[]>;
   nearestRoad(coordinate: Coordinate, signal?: AbortSignal): Promise<NearestRoad | null>;
   matchTrace(trace: Coordinate[], signal?: AbortSignal): Promise<MatchedTrace | null>;
 }

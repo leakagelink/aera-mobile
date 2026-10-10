@@ -23,6 +23,22 @@ export type LineCollection = {
   features: LineStringFeature[];
 };
 
+export function trafficCollection(lines: { coordinates: Coordinate[]; level: string }[]) {
+  return {
+    type: 'FeatureCollection' as const,
+    features: lines
+      .filter((line) => line.coordinates.length >= 2)
+      .map((line) => ({
+        type: 'Feature' as const,
+        properties: { level: line.level },
+        geometry: {
+          type: 'LineString' as const,
+          coordinates: line.coordinates.map((coordinate) => [coordinate.longitude, coordinate.latitude] as [number, number]),
+        },
+      })),
+  };
+}
+
 export function lineCollection(lines: { coordinates: Coordinate[] }[]): LineCollection {
   return {
     type: 'FeatureCollection',

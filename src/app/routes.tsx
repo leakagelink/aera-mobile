@@ -7,11 +7,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AeraMap, type AeraMapHandle } from '@/components/map/AeraMap';
 import { TravelModeBar } from '@/components/routing/TravelModeBar';
 import { AppText } from '@/components/ui/AppText';
-import { IconButton, PrimaryButton } from '@/components/ui/Buttons';
+import { IconButton, PrimaryButton, SecondaryButton } from '@/components/ui/Buttons';
 import { RouteCard } from '@/components/ui/RouteCard';
 import { ErrorState, LoadingState } from '@/components/ui/States';
 import { useForegroundLocation } from '@/features/location/useForegroundLocation';
+import { shareEta } from '@/features/navigation/shareEta';
 import { beginNavigation } from '@/features/navigation/session';
+import { useRouteTraffic } from '@/features/traffic/useRouteTraffic';
 import { useJourneyRoutes } from '@/features/routing/useJourneyRoutes';
 import { useLocationStore } from '@/store/locationStore';
 import { usePreferencesStore } from '@/store/preferencesStore';
@@ -34,6 +36,7 @@ export default function RoutesScreen() {
   const destination = useSessionStore((state) => state.destination);
   const routes = useSessionStore((state) => state.routes);
   const route = useSessionStore((state) => selectedRoute(state));
+  const traffic = useRouteTraffic(route?.geometry);
   const selectRoute = useSessionStore((state) => state.selectRoute);
   const startPoint = origin ?? location;
   const query = useJourneyRoutes(Boolean(focused && destination && startPoint));
@@ -51,7 +54,7 @@ export default function RoutesScreen() {
       await beginNavigation();
       router.push('/navigation');
     } catch (error) {
-      Alert.alert('Navigation did not start', errorMessage(error));
+      Alert.alert('Navigation nahi chali', errorMessage(error));
     } finally {
       setStarting(false);
     }
@@ -60,7 +63,7 @@ export default function RoutesScreen() {
   if (!destination) {
     return (
       <View style={[styles.fill, { backgroundColor: theme.colors.background }]}>
-        <ErrorState title="Choose a destination" message="Search for a place, then compare routes." actionLabel="Search" onAction={() => router.replace('/search')} />
+        <ErrorState title="Manzil chuno" message="Jagah dhoondo, phir rasta dekho." actionLabel="Dhoondo" onAction={() => router.replace('/search')} />
       </View>
     );
   }
@@ -73,17 +76,18 @@ export default function RoutesScreen() {
         origin={origin}
         destination={destination}
         routes={routes.map((item) => ({ id: item.id, coordinates: item.geometry, selected: item.id === route?.id }))}
+        traffic={traffic.lines}
       />
       <View style={[styles.back, { top: insets.top + 8 }]}>
-        <IconButton icon={ArrowLeft} label="Go back" onPress={() => router.back()} />
+        <IconButton icon={ArrowLeft} label="Wapas" onPress={() => router.back()} />
       </View>
       <View style={[styles.sheet, { backgroundColor: theme.colors.background, paddingBottom: insets.bottom + 12 }]}>
         <View style={styles.modes}>
           <TravelModeBar />
         </View>
-        {query.isFetching && routes.length === 0 ? <LoadingState title="Comparing routes" message="Calculating distance and time." /> : null}
+        {query.isFetching && routes.length === 0 ? <LoadingState title="Raste dekh raha hoon" message="Doori aur time nikal raha hoon." /> : null}
         {query.isError && routes.length === 0 ? (
-          <ErrorState title="Route unavailable" message={errorMessage(query.error)} actionLabel="Try again" onAction={() => void query.refetch()} />
+          <ErrorState title="Rasta nahi mila" message={errorMessage(query.error)} actionLabel="Dobara" onAction={() => void query.refetch()} />
         ) : null}
         {routes.length > 0 ? (
           <>
@@ -100,14 +104,32 @@ export default function RoutesScreen() {
                 />
               ))}
             </ScrollView>
+            {route?.limitNote ? (
+              <AppText size={13} color={theme.colors.mutedForeground} style={styles.note}>
+                {route.limitNote}
+              </AppText>
+            ) : null}
+            {traffic.note ? (
+              <AppText size={13} color={theme.colors.mutedForeground} style={styles.note}>
+                {traffic.note}
+              </AppText>
+            ) : null}
             {awayFromStart ? (
               <AppText size={13} color={theme.colors.mutedForeground} style={styles.note}>
-                This route starts at {origin?.name}. Set From to your location to start turn-by-turn navigation.
+                Ye rasta {origin?.name} se shuru hota hai. Turn-by-turn ke liye Yahan se ko apni jagah karo.
               </AppText>
             ) : null}
             <PrimaryButton icon={Navigation} disabled={!route || starting || awayFromStart} onPress={() => void start()} style={styles.start}>
-              {starting ? 'Starting…' : 'Start navigation'}
+              {starting ? 'Chalu ho raha hai…' : 'Navigation chalu'}
             </PrimaryButton>
+            {route && destination ? (
+              <SecondaryButton
+                style={styles.start}
+                onPress={() => void shareEta({ destination: destination.name, seconds: route.durationSeconds, meters: route.distanceMeters, units })}
+              >
+                ETA bhejo
+              </SecondaryButton>
+            ) : null}
           </>
         ) : null}
       </View>

@@ -22,22 +22,22 @@ export default function PrivacyScreen() {
   const token = useAccountStore((state) => state.token);
 
   function confirmClear() {
-    Alert.alert('Delete trip history?', 'This removes journeys stored on this device.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => void clearHistory() },
+    Alert.alert('Safar ki list mita dein?', 'Is phone par save safar hat jayenge.', [
+      { text: 'Rehne do', style: 'cancel' },
+      { text: 'Mitao', style: 'destructive', onPress: () => void clearHistory() },
     ]);
   }
 
   function confirmDeleteAccount() {
-    Alert.alert('Delete Arah account?', 'This removes the account on the Arah server and the trip history on this phone. It cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert('Arah account mita dein?', 'Server wala account aur is phone ki trip list hat jayegi. Wapas nahi aayegi.', [
+      { text: 'Rehne do', style: 'cancel' },
       {
-        text: 'Delete account',
+        text: 'Account mitao',
         style: 'destructive',
         onPress: () => {
           void deleteArahAccount()
-            .then(() => Alert.alert('Account deleted', 'The Arah account and the trip history on this phone have been removed.'))
-            .catch((caught: unknown) => Alert.alert('Account was not deleted', errorMessage(caught, 'Try again.')));
+            .then(() => Alert.alert('Account mit gaya', 'Arah account aur is phone ki trip list hat gayi.'))
+            .catch((caught: unknown) => Alert.alert('Account nahi mita', errorMessage(caught, 'Dobara try karo.')));
         },
       },
     ]);
@@ -45,22 +45,22 @@ export default function PrivacyScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
-      <ScreenHeader title="Privacy and location" subtitle="Foreground only" onBack={() => router.back()} />
+      <ScreenHeader title="Privacy aur location" subtitle="Sirf app khuli ho tab" onBack={() => router.back()} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={[styles.hero, { backgroundColor: theme.colors.secondary }]}>
           <ShieldCheck color={theme.colors.success} size={28} />
           <AppText size={24} weight="semibold" style={styles.heroTitle}>
-            Location stays in the foreground.
+            Location tab chalti hai jab app khuli ho.
           </AppText>
           <AppText size={14} color={theme.colors.mutedForeground} style={styles.copy}>
-            Arah uses location only while the app is open. Trip history stays on this phone. An account stores your email on the Arah server. Google sign-in also stores the Google account id. If you allow notifications, the notification token for this phone is stored so Arah can message this device.
+            Arah location sirf tab use karta hai jab app khuli ho. Safar is phone par rehta hai. Account par aapka email Arah server par rehta hai. Google sign-in par Google account id bhi rehti hai. Notification on karo to is phone ka notification token save hota hai, taaki Arah is phone par message bhej sake.
           </AppText>
         </View>
-        <Info title="Account" detail={email && token ? `Signed in as ${email}.` : 'Not signed in. Weather and the assistant need an Arah account.'} />
-        <Info title="Foreground location" detail={permission === 'granted' ? (watching ? 'On while this flow needs it' : 'Allowed, not currently watching') : permission === 'denied' ? 'Denied' : 'Not requested yet'} />
-        <Info title="Background location" detail="Not used. Arah does not track you when the app is closed or in the background." />
-        <Info title="Trip storage" detail="Trips stay on this phone. Deleting the account also clears the trip history on the phone you use to delete it." />
-        <Info title="Other services" detail="Map tiles come from OpenFreeMap. Place search uses Nominatim. Routes use OSRM. Weather uses OpenWeather through Arah. The assistant uses Google Gemini, and Relay Models with DeepSeek if Gemini cannot answer. Voice, when you use it, is sent to ElevenLabs and is not stored. Saved chats stay until you delete them. Traffic, when available, uses TomTom. Google sign-in uses your Google account. Notifications use Firebase Cloud Messaging. Arah does not show ads." />
+        <Info title="Account" detail={email && token ? `Sign in: ${email}.` : 'Sign in nahi hai. Mausam aur assistant ke liye Arah account chahiye.'} />
+        <Info title="Location" detail={permission === 'granted' ? (watching ? 'Is screen par on hai' : 'Ijaza hai, abhi nahi chal rahi') : permission === 'denied' ? 'Mana hai' : 'Abhi nahi maangi'} />
+        <Info title="Background location" detail="Use nahi hoti. App band ya background mein Arah aapko track nahi karta." />
+        <Info title="Safar" detail="Safar is phone par rehte hain. Account mitane par usi phone ki trip list bhi hatt jaati hai jisse aap mitaate ho." />
+        <Info title="Doosri services" detail="Map tiles OpenFreeMap se aate hain. Jagah Nominatim se. Rasta OSRM se. Mausam OpenWeather se, Arah ke through. Assistant Google Gemini use karta hai, aur agar Gemini jawab na de to Relay Models DeepSeek. Awaaz, jab aap use karo, ElevenLabs ko jaati hai aur save nahi hoti. Bachayi chat tab tak rehti hai jab tak aap mitao. Traffic, jab mile, TomTom se aata hai. Google sign-in aapka Google account use karta hai. Notification Firebase Cloud Messaging use karti hai. Arah ads nahi dikhata." />
         <Pressable accessibilityRole="button" onPress={() => void Linking.openURL(arahPolicyUrls.privacy)} style={[styles.action, { backgroundColor: theme.colors.surface }]}>
           <AppText size={15} weight="semibold">
             Privacy policy
@@ -73,19 +73,19 @@ export default function PrivacyScreen() {
         </Pressable>
         <Pressable accessibilityRole="button" onPress={() => void Linking.openSettings()} style={[styles.action, { backgroundColor: theme.colors.surface }]}>
           <AppText size={15} weight="semibold">
-            Open system location settings
+            Phone ki location setting
           </AppText>
         </Pressable>
         {token ? (
           <Pressable accessibilityRole="button" onPress={confirmDeleteAccount} style={[styles.action, { backgroundColor: `${theme.colors.error}14` }]}>
             <AppText size={15} weight="semibold" color={theme.colors.error}>
-              Delete account
+              Account mitao
             </AppText>
           </Pressable>
         ) : null}
         <Pressable accessibilityRole="button" onPress={confirmClear} style={[styles.action, { backgroundColor: `${theme.colors.error}14` }]}>
           <AppText size={15} weight="semibold" color={theme.colors.error}>
-            Delete trip history
+            Safar ki list mitao
           </AppText>
         </Pressable>
       </ScrollView>
