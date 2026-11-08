@@ -10,10 +10,12 @@ import { usePreferencesStore } from '@/store/preferencesStore';
 import { useAccountStore } from '@/store/sessionAuthStore';
 import { usePrefersReducedMotion } from '@/theme/ReducedMotion';
 import { useTheme } from '@/theme/useTheme';
+import { useT } from '@/i18n';
 
 export default function SplashRoute() {
   const router = useRouter();
   const theme = useTheme();
+  const { t } = useT();
   const reduced = usePrefersReducedMotion();
   const hydrated = usePreferencesStore((state) => state.hydrated);
   const onboarded = usePreferencesStore((state) => state.onboardingComplete);
@@ -60,10 +62,10 @@ export default function SplashRoute() {
         Arah
       </AppText>
       <AppText size={16} color={theme.colors.heroMuted}>
-        Talk to your map.
+        {t('splash.tagline')}
       </AppText>
       <AppText size={12} color={theme.colors.heroMuted} style={styles.hint}>
-        {ready ? 'Tap to begin' : 'Preparing your map'}
+        {ready ? t('splash.tap') : t('splash.preparing')}
       </AppText>
     </Pressable>
   );

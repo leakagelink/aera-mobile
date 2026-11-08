@@ -7,30 +7,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '@/components/ui/AppText';
 import { PrimaryButton } from '@/components/ui/Buttons';
 import { LogoMark } from '@/components/ui/LogoMark';
+import { useT, type MessageKey } from '@/i18n';
 import { usePreferencesStore } from '@/store/preferencesStore';
 import { useTheme } from '@/theme/useTheme';
 
-const steps = [
-  {
-    title: 'Apna map.',
-    copy: 'Dekho kahan ho, jagah dhoondo, aur asli raste par chalo.',
-    icon: MapPinned,
-  },
-  {
-    title: 'Rasta compare karo.',
-    copy: 'Arah sadak se doori, time, aur doosra rasta maangta hai.',
-    icon: Search,
-  },
-  {
-    title: 'Jo trip shuru karo, woh save hoti hai.',
-    copy: 'Doori, time, aur speed is phone par rehte hain, jab tak aap mitao nahi.',
-    icon: Gauge,
-  },
+const steps: { title: MessageKey; copy: MessageKey; icon: typeof MapPinned }[] = [
+  { title: 'onboarding.oneTitle', copy: 'onboarding.oneBody', icon: MapPinned },
+  { title: 'onboarding.twoTitle', copy: 'onboarding.twoBody', icon: Search },
+  { title: 'onboarding.threeTitle', copy: 'onboarding.threeBody', icon: Gauge },
 ];
 
 export default function OnboardingRoute() {
   const router = useRouter();
   const theme = useTheme();
+  const { t } = useT();
   const insets = useSafeAreaInsets();
   const completeOnboarding = usePreferencesStore((state) => state.completeOnboarding);
   const [step, setStep] = useState(0);
@@ -50,7 +40,7 @@ export default function OnboardingRoute() {
         <LogoMark />
         <Pressable accessibilityRole="button" onPress={finish} style={styles.skip}>
           <AppText size={14} weight="medium" color={theme.colors.mutedForeground}>
-            Chhodo
+            {t('onboarding.skip')}
           </AppText>
         </Pressable>
       </View>
@@ -65,13 +55,13 @@ export default function OnboardingRoute() {
         ))}
       </View>
       <AppText size={34} weight="semibold" style={styles.title}>
-        {item.title}
+        {t(item.title)}
       </AppText>
       <AppText size={16} color={theme.colors.mutedForeground} style={styles.copy}>
-        {item.copy}
+        {t(item.copy)}
       </AppText>
       <PrimaryButton icon={step === steps.length - 1 ? undefined : ArrowRight} onPress={() => (step === steps.length - 1 ? finish() : setStep(step + 1))} style={styles.button}>
-        {step === steps.length - 1 ? 'Chalo' : 'Aage'}
+        {step === steps.length - 1 ? t('onboarding.start') : t('onboarding.next')}
       </PrimaryButton>
     </View>
   );

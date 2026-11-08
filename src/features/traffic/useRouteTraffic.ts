@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
+import { t } from '@/i18n';
+import { usePreferencesStore } from '@/store/preferencesStore';
 import { routeWindows } from '@/features/traffic/windows';
 import { env } from '@/services/env';
 import { fetchFlowSamples } from '@/services/traffic/routeFlow';
@@ -13,6 +15,7 @@ export type TrafficLine = {
 };
 
 export function useRouteTraffic(geometry: Coordinate[] | null | undefined) {
+  usePreferencesStore((state) => state.assistantLanguage);
   const key = geometry?.map((point) => `${point.latitude.toFixed(3)},${point.longitude.toFixed(3)}`).join('|') ?? '';
   const windows = useMemo(() => routeWindows(geometry ?? []), [key, geometry]);
   const query = useQuery({
@@ -36,9 +39,9 @@ export function useRouteTraffic(geometry: Coordinate[] | null | undefined) {
     !geometry || geometry.length < 2
       ? null
       : !env.aeraApiBaseUrl || query.isError || query.data?.available === false || (query.data && lines.length === 0)
-        ? 'Traffic nahi pata'
+        ? t('traffic.unknown')
         : query.data
-          ? 'Rang sirf us hisse ka hai jahan traffic mila. Baaki ka traffic nahi pata.'
+          ? t('traffic.partial')
           : null;
 
   return { lines, note };

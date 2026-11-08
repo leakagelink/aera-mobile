@@ -16,6 +16,7 @@ import { useForegroundLocation } from '@/features/location/useForegroundLocation
 import { gpsWarning, hasArrived, rerouteDecision } from '@/features/navigation/reroute';
 import { navigationSnapshot } from '@/features/navigation/progress';
 import { completeNavigation } from '@/features/navigation/session';
+import { limitCopy } from '@/features/routing/instructions';
 import { shareEta } from '@/features/navigation/shareEta';
 import { useSpokenGuidance } from '@/features/navigation/useSpokenGuidance';
 import { useRouteTraffic } from '@/features/traffic/useRouteTraffic';
@@ -28,6 +29,7 @@ import { selectedRoute, useSessionStore } from '@/store/sessionStore';
 import { useTripStore } from '@/store/tripStore';
 import { radius } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
+import { useT } from '@/i18n';
 import { errorMessage } from '@/utils/errors';
 import { formatClock, formatDistance, formatDuration, formatSpeed, speedUnit } from '@/utils/format';
 
@@ -36,6 +38,7 @@ export default function NavigationScreen() {
   useTripRecorder(true);
   const router = useRouter();
   const theme = useTheme();
+  const { t } = useT();
   const insets = useSafeAreaInsets();
   const mapRef = useRef<AeraMapHandle>(null);
   const [follow, setFollow] = useState(false);
@@ -83,7 +86,7 @@ export default function NavigationScreen() {
     lastReroute.current = now;
     const session = useSessionStore.getState();
     const request = now;
-    setRouteNote('Naya rasta nikal raha hoon…');
+    setRouteNote(t('navi.rerouting'));
     void routingProvider()
       .calculateRoute(location, destination, undefined, session.travelMode, {
         avoidTolls: session.avoidTolls,
@@ -92,14 +95,14 @@ export default function NavigationScreen() {
       .then((routes) => {
         if (lastReroute.current !== request) return;
         if (routes.length === 0) {
-          setRouteNote('Naya rasta nahi mila.');
+          setRouteNote(t('navi.rerouteNone'));
           return;
         }
         useSessionStore.getState().setRoutes(routes);
         setRouteNote(routes[0]?.limitNote ?? null);
       })
       .catch(() => {
-        if (lastReroute.current === request) setRouteNote('Rasta dobara nahi nikla. Connection dekho.');
+        if (lastReroute.current === request) setRouteNote(t('navi.rerouteFail'));
       });
   }, [offRoute, location, destination, now, paused]);
 
@@ -133,15 +136,15 @@ export default function NavigationScreen() {
       await completeNavigation();
       router.replace('/trip-complete');
     } catch (error) {
-      Alert.alert('Trip save nahi hui', errorMessage(error));
+      Alert.alert(t('navi.saveFailed'), errorMessage(error));
       setEnding(false);
     }
   }
 
   function confirmEnd() {
-    Alert.alert('Trip khatam karein?', 'Shuru se ab tak ka safar save ho jayega.', [
-      { text: 'Chalte raho', style: 'cancel' },
-      { text: 'Trip khatam', style: 'destructive', onPress: () => void finish() },
+    Alert.alert(t('navi.endTitle'), t('navi.endBody'), [
+      { text: t('navi.keepGoing'), style: 'cancel' },
+      { text: t('navi.endTrip'), style: 'destructive', onPress: () => void finish() },
     ]);
   }
 
@@ -150,7 +153,7 @@ export default function NavigationScreen() {
   });
 
   const arrived = snapshot ? hasArrived(snapshot.remainingMeters, snapshot.offRoute, location?.accuracy ?? null) : false;
-  const warning = location ? gpsWarning(location.accuracy, now - location.timestamp) : 'GPS signal nahi mil raha. Nayi location ka intezaar hai.';
+  const warning = location ? gpsWarning(location.accuracy, Date.now() - location.timestamp) : t('navi.gpsLost');
   const voice = useSpokenGuidance(!paused, snapshot && destination ? {
     arrived,
     offRoute: snapshot.offRoute,
@@ -165,13 +168,13 @@ export default function NavigationScreen() {
   useEffect(() => {
     if (!arrived || !destination || arrivedTold.current) return;
     arrivedTold.current = true;
-    Alert.alert('Pahunch gaye', destination.name);
+    Alert.alert(t('navi.arrived'), destination.name);
   }, [arrived, destination]);
 
   if (!route || !destination) {
     return (
       <View style={[styles.fill, { backgroundColor: theme.colors.background }]}>
-        <ErrorState title="Navigation chalu nahi hai" message="Pehle rasta chuno, phir trip shuru karo." actionLabel="Map par wapas" onAction={() => router.replace('/map')} />
+        <ErrorState title={t('navi.notStartedTitle')} message={t('navi.notStartedBody')} actionLabel={t('navi.backToMap')} onAction={() => router.replace('/map')} />
       </View>
     );
   }
@@ -188,7 +191,7 @@ export default function NavigationScreen() {
       />
       <View style={[styles.instruction, { top: insets.top + 8 }]}>
         <NavigationInstruction
-          instruction={arrived ? 'Pahunch gaye' : (snapshot?.instruction ?? 'Seedha chalte raho')}
+          instruction={arrived ? t('navi.arrived') : (snapshot?.instruction ?? t('navi.straight'))}
           distance={arrived ? destination.name : formatDistance(snapshot?.instructionDistanceMeters ?? route.distanceMeters, units)}
           following={arrived ? undefined : snapshot?.followingInstruction}
           modifier={snapshot?.maneuverModifier}
@@ -199,7 +202,7 @@ export default function NavigationScreen() {
             Manzil: {destination.name}
           </AppText>
           <AppText size={12} color={theme.colors.mutedForeground}>
-            {follow ? 'Neeli rekha wahi sadak hai. Us par chalte raho.' : 'Poora rasta dikh raha hai. Apni jagah ke saath chalne ke liye neela button dabao.'}
+            {follow ? t('navi.followOn') : t('navi.followOff')}
           </AppText>
         </View>
         {warning ? (
@@ -226,36 +229,36 @@ export default function NavigationScreen() {
         {route.limitNote ? (
           <View style={[styles.note, { backgroundColor: theme.colors.nav }]}>
             <AppText size={13} weight="medium">
-              {route.limitNote}
+              {limitCopy(route.limitNote)}
             </AppText>
           </View>
         ) : null}
         {routeNote ? (
           <View style={[styles.note, { backgroundColor: theme.colors.nav }]}>
             <AppText size={13} weight="medium">
-              {routeNote}
+              {limitCopy(routeNote)}
             </AppText>
           </View>
         ) : null}
       </View>
       <View style={styles.recenter}>
-        <IconButton icon={voice.muted ? VolumeX : Volume2} label={voice.muted ? 'Awaaz chalu karo' : 'Awaaz band karo'} primary={!voice.muted} onPress={voice.toggleMuted} />
-        <IconButton icon={LocateFixed} label="Meri jagah follow karo" primary={follow} onPress={() => setFollow(true)} />
+        <IconButton icon={voice.muted ? VolumeX : Volume2} label={voice.muted ? t('navi.voiceOn') : t('navi.voiceOff')} primary={!voice.muted} onPress={voice.toggleMuted} />
+        <IconButton icon={LocateFixed} label={t('navi.followMe')} primary={follow} onPress={() => setFollow(true)} />
       </View>
       <View style={[styles.bottom, { paddingBottom: insets.bottom + 8 }]}>
         <BottomSheet expanded={expanded} onExpandedChange={setExpanded}>
           {expanded && live ? (
             <View style={styles.metrics}>
-              <MetricCard compact label="Average" value={formatSpeed(live.averageSpeedMps, units)} unit={speedUnit(units)} />
-              <MetricCard compact label="Chala" value={formatDistance(live.distanceMeters, units)} />
-              <MetricCard compact label="Kul time" value={formatDuration(live.durationSeconds)} />
-            <MetricCard compact label="Chalte" value={formatDuration(live.movingTimeSeconds)} />
-            <MetricCard compact label="Ruke" value={formatDuration(live.stoppedTimeSeconds)} />
+              <MetricCard compact label={t('navi.average')} value={formatSpeed(live.averageSpeedMps, units)} unit={speedUnit(units)} />
+              <MetricCard compact label={t('navi.driven')} value={formatDistance(live.distanceMeters, units)} />
+              <MetricCard compact label={t('navi.totalTime')} value={formatDuration(live.durationSeconds)} />
+              <MetricCard compact label={t('navi.moving')} value={formatDuration(live.movingTimeSeconds)} />
+              <MetricCard compact label={t('navi.stopped')} value={formatDuration(live.stoppedTimeSeconds)} />
             </View>
           ) : null}
           <View style={styles.primaryMetrics}>
-            <Stat value={snapshot ? formatClock(snapshot.eta) : '—'} label={snapshot ? `Pahunch · ${formatDuration(snapshot.remainingSeconds)}` : 'Pahunch'} />
-            <Stat value={snapshot ? formatDistance(snapshot.remainingMeters, units) : '—'} label="baaki" />
+            <Stat value={snapshot ? formatClock(snapshot.eta) : '—'} label={snapshot ? t('navi.arriveIn', { time: formatDuration(snapshot.remainingSeconds) }) : t('navi.arrive')} />
+            <Stat value={snapshot ? formatDistance(snapshot.remainingMeters, units) : '—'} label={t('navi.left')} />
             <Stat value={formatSpeed(location?.speed ?? null, units)} label={speedUnit(units)} />
           </View>
           <View style={[styles.footer, { borderTopColor: theme.colors.border }]}>
@@ -266,7 +269,7 @@ export default function NavigationScreen() {
               style={[styles.end, { backgroundColor: theme.colors.secondary }]}
             >
               <AppText size={14} weight="semibold">
-                {paused ? 'Chalu' : 'Ruko'}
+                {paused ? t('navi.resume') : t('navi.pause')}
               </AppText>
             </Pressable>
             <Pressable
@@ -291,7 +294,7 @@ export default function NavigationScreen() {
             <Pressable accessibilityRole="button" onPress={confirmEnd} style={[styles.end, { backgroundColor: `${theme.colors.error}1F` }]}>
               <Square color={theme.colors.error} size={12} fill={theme.colors.error} />
               <AppText size={14} weight="semibold" color={theme.colors.error}>
-                {ending ? 'Save ho raha hai…' : 'Trip khatam'}
+                {ending ? t('navi.saving') : t('navi.endTrip')}
               </AppText>
             </Pressable>
           </View>

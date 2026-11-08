@@ -8,6 +8,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { ErrorState, LoadingState } from '@/components/ui/States';
 import { useRecentPlaces, usePlaceSearch } from '@/features/search/usePlaceSearch';
+import { useT } from '@/i18n';
 import { useLocationStore } from '@/store/locationStore';
 import { usePreferencesStore } from '@/store/preferencesStore';
 import { useSessionStore } from '@/store/sessionStore';
@@ -26,6 +27,7 @@ export default function SearchScreen() {
   const search = usePlaceSearch(query);
   const { places: recent, remember } = useRecentPlaces();
   const theme = useTheme();
+  const { t } = useT();
   const location = useLocationStore((state) => state.current);
   const units = usePreferencesStore((state) => state.units);
 
@@ -49,9 +51,9 @@ export default function SearchScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
-      <ScreenHeader title={field === 'origin' ? 'Yahan se' : 'Kahan jana hai'} onBack={() => router.back()} />
+      <ScreenHeader title={field === 'origin' ? t('search.originTitle') : t('search.destinationTitle')} onBack={() => router.back()} />
       <View style={styles.search}>
-        <SearchBar value={query} onChangeText={setQuery} placeholder={field === 'origin' ? 'Shuru ki jagah dhoondo' : 'Manzil dhoondo'} autoFocus />
+        <SearchBar value={query} onChangeText={setQuery} placeholder={field === 'origin' ? t('search.originPlaceholder') : t('search.destinationPlaceholder')} autoFocus />
       </View>
       <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
         {field === 'origin' ? (
@@ -61,19 +63,19 @@ export default function SearchScreen() {
             </View>
             <View style={styles.copy}>
               <AppText size={15} weight="semibold">
-                Aapki jagah
+                {t('search.current')}
               </AppText>
               <AppText size={12} color={theme.colors.mutedForeground} numberOfLines={1}>
-                Jahan abhi ho, wahan se shuru
+                {t('search.currentHint')}
               </AppText>
             </View>
           </Pressable>
         ) : null}
         {!showResults ? (
-          <Section title="Haal ki jagah">
+          <Section title={t('search.recent')}>
             {recent.length === 0 ? (
               <AppText size={14} color={theme.colors.mutedForeground}>
-                Jo jagah chunoge, yahan dikhegi.
+                {t('search.recentEmpty')}
               </AppText>
             ) : (
               recent.map((place) => (
@@ -82,12 +84,12 @@ export default function SearchScreen() {
             )}
           </Section>
         ) : null}
-        {showResults && search.isFetching && !search.data ? <LoadingState title="Dhoondh raha hoon" message="Jagah nikal raha hoon." /> : null}
+        {showResults && search.isFetching && !search.data ? <LoadingState title={t('search.loadingTitle')} message={t('search.loadingBody')} /> : null}
         {showResults && search.isError ? (
-          <ErrorState title="Search nahi hui" message={errorMessage(search.error)} actionLabel="Dobara" onAction={() => void search.refetch()} />
+          <ErrorState title={t('search.errorTitle')} message={errorMessage(search.error)} actionLabel={t('common.retry')} onAction={() => void search.refetch()} />
         ) : null}
         {showResults && search.isSuccess && search.data.length === 0 ? (
-          <ErrorState title="Jagah nahi mili" message="Naam, sheher, ya pata aur saaf likho." />
+          <ErrorState title={t('search.emptyTitle')} message={t('search.emptyBody')} />
         ) : null}
         {showResults && search.data
           ? search.data.map((place) => (
@@ -148,6 +150,7 @@ function PlaceRow({
   onSave?: () => void;
 }) {
   const theme = useTheme();
+  const { t } = useT();
   const Icon = icon === 'recent' ? History : MapPin;
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={[styles.row, { borderBottomColor: theme.colors.border }]}>
@@ -168,9 +171,9 @@ function PlaceRow({
         </AppText>
       ) : null}
       {onSave ? (
-        <Pressable accessibilityRole="button" accessibilityLabel={`${place.name} save karo`} onPress={onSave} hitSlop={8}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('common.save')} onPress={onSave} hitSlop={8}>
           <AppText size={12} weight="semibold" color={theme.colors.primary}>
-            Bachao
+            {t('common.save')}
           </AppText>
         </Pressable>
       ) : null}

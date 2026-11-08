@@ -1,6 +1,7 @@
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { useEffect, useRef, useState } from 'react';
 
+import { t } from '@/i18n';
 import { spokenCue, type SpokenInput } from '@/features/navigation/spoken';
 import { writeReplyAudio } from '@/services/ai/audioFile';
 import { speakText } from '@/services/ai/chat';
@@ -18,10 +19,20 @@ export function useSpokenGuidance(enabled: boolean, input: SpokenInput | null) {
     return () => {
       generation.current += 1;
       player.current?.pause();
+      player.current?.setActiveForLockScreen(false);
       player.current?.release();
       player.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    if (!enabled) return;
+    void setAudioModeAsync({
+      playsInSilentMode: true,
+      shouldPlayInBackground: true,
+      interruptionMode: 'doNotMix',
+    }).catch(() => undefined);
+  }, [enabled]);
 
   const cueId = enabled && !muted && input ? spokenCue(input)?.id ?? null : null;
 
@@ -39,19 +50,25 @@ export function useSpokenGuidance(enabled: boolean, input: SpokenInput | null) {
 
   async function play(phrase: string, token: number) {
     try {
-      await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false });
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        shouldPlayInBackground: true,
+        interruptionMode: 'doNotMix',
+      });
       const audio = await speakText(phrase);
       if (token !== generation.current) return;
       const uri = await writeReplyAudio(audio, `arah-guidance-${token}.mp3`);
       if (token !== generation.current) return;
       player.current?.pause();
+      player.current?.setActiveForLockScreen(false);
       player.current?.release();
       const next = createAudioPlayer(uri);
       player.current = next;
+      next.setActiveForLockScreen(true, { title: phrase.slice(0, 80), artist: 'Arah' });
       next.play();
       setNote(null);
     } catch {
-      if (token === generation.current) setNote('Awaaz nahi chali. Turn screen par dikh raha hai.');
+      if (token === generation.current) setNote(t('navi.voiceFailed'));
     }
   }
 
@@ -60,6 +77,7 @@ export function useSpokenGuidance(enabled: boolean, input: SpokenInput | null) {
       if (!value) {
         generation.current += 1;
         player.current?.pause();
+        player.current?.setActiveForLockScreen(false);
         player.current?.release();
         player.current = null;
       }

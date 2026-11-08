@@ -6,12 +6,14 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/ui/AppText';
 import { readAudioBase64, writeReplyAudio } from '@/services/ai/audioFile';
 import { sendAiChat, speakText, transcribeSpeech, type AiChatTurn } from '@/services/ai/chat';
+import { useT } from '@/i18n';
 import { radius } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
 import { errorMessage } from '@/utils/errors';
 
 export function HomeVoice() {
   const theme = useTheme();
+  const { t } = useT();
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const player = useRef<ReturnType<typeof createAudioPlayer> | null>(null);
   const [items, setItems] = useState<AiChatTurn[]>([]);
@@ -34,7 +36,7 @@ export function HomeVoice() {
     const history = items;
     setItems((current) => [...current, { role: 'user', text: message }]);
     setPending(true);
-    setNote('Soch raha hoon...');
+    setNote(t('voice.thinking'));
     try {
       const result = await sendAiChat(message, history);
       setItems((current) => [...current, { role: 'assistant', text: result.message }]);
@@ -42,7 +44,7 @@ export function HomeVoice() {
       setNote(null);
       await play(result.message);
     } catch (caught) {
-      setNote(errorMessage(caught, 'Assistant abhi available nahi hai.'));
+      setNote(errorMessage(caught, t('voice.unavailable')));
     } finally {
       setPending(false);
     }
@@ -57,7 +59,7 @@ export function HomeVoice() {
       player.current = next;
       next.play();
     } catch (caught) {
-      setNote(errorMessage(caught, 'Jawab likh kar aa gaya. Voice ke liye admin mein ElevenLabs key chahiye.'));
+      setNote(errorMessage(caught, t('voice.written')));
     }
   }
 
@@ -68,31 +70,31 @@ export function HomeVoice() {
       await recorder.stop();
       const uri = recorder.uri;
       if (!uri) {
-        setNote('Recording khali thi.');
+        setNote(t('voice.empty'));
         return;
       }
       setPending(true);
-      setNote('Sun liya, likh raha hoon...');
+      setNote(t('voice.hearing'));
       try {
         const text = await transcribeSpeech(await readAudioBase64(uri), 'audio/mp4');
         setPending(false);
         await ask(text);
       } catch (caught) {
         setPending(false);
-        setNote(errorMessage(caught, 'Voice abhi available nahi hai.'));
+        setNote(errorMessage(caught, t('ai.voiceMissing')));
       }
       return;
     }
     const permission = await requestRecordingPermissionsAsync();
     if (!permission.granted) {
-      setNote('Microphone permission off hai.');
+      setNote(t('voice.micOff'));
       return;
     }
     await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true });
     await recorder.prepareToRecordAsync();
     recorder.record();
     setReply(null);
-    setNote('Bolo... phir Stop dabao.');
+    setNote(t('voice.speakThenStop'));
     setRecording(true);
   }
 
@@ -107,14 +109,14 @@ export function HomeVoice() {
       ) : null}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={recording ? 'Bolna band karo' : 'Arah se bolo'}
+        accessibilityLabel={recording ? t('voice.stopTalk') : t('voice.talk')}
         disabled={pending && !recording}
         onPress={() => void toggleMic()}
         style={[styles.button, { backgroundColor: recording ? theme.colors.primary : theme.colors.nav, borderColor: theme.colors.glassBorder }]}
       >
         <Mic color={recording ? theme.colors.primaryForeground : theme.colors.foreground} size={18} />
         <AppText size={14} weight="semibold" color={recording ? theme.colors.primaryForeground : theme.colors.foreground}>
-          {recording ? 'Stop' : 'Bolo'}
+          {recording ? t('voice.stop') : t('nav.talk')}
         </AppText>
       </Pressable>
     </View>

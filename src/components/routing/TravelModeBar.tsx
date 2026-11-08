@@ -1,10 +1,12 @@
 import { Bike, Car, Footprints, Scooter } from 'lucide-react-native';
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
+import { useT } from '@/i18n';
 import { AppText } from '@/components/ui/AppText';
 import { useSessionStore } from '@/store/sessionStore';
 import { radius } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
+import { travelModeLabel } from '@/types/travel';
 import { TRAVEL_MODES } from '@/types/travel';
 
 const icons = {
@@ -16,6 +18,7 @@ const icons = {
 
 export function TravelModeBar() {
   const theme = useTheme();
+  useT();
   const mode = useSessionStore((state) => state.travelMode);
   const setTravelMode = useSessionStore((state) => state.setTravelMode);
 
@@ -40,7 +43,7 @@ export function TravelModeBar() {
           >
             <Icon color={active ? theme.colors.primaryForeground : theme.colors.foreground} size={14} />
             <AppText size={12} weight="medium" color={active ? theme.colors.primaryForeground : theme.colors.foreground}>
-              {item.label}
+              {travelModeLabel(item.id)}
             </AppText>
           </Pressable>
         );

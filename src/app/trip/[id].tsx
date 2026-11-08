@@ -9,6 +9,7 @@ import { MetricCard } from '@/components/ui/MetricCard';
 import { MetricGrid } from '@/components/ui/MetricGrid';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { ErrorState } from '@/components/ui/States';
+import { useT } from '@/i18n';
 import { usePreferencesStore } from '@/store/preferencesStore';
 import { useTripStore } from '@/store/tripStore';
 import { radius } from '@/theme';
@@ -23,6 +24,7 @@ export default function TripDetailScreen() {
   const { gutter, mapHeight, maxContent } = useResponsive();
   const params = useLocalSearchParams<{ id?: string }>();
   const id = typeof params.id === 'string' ? params.id : '';
+  const { t } = useT();
   const units = usePreferencesStore((state) => state.units);
   const trip = useTripStore((state) => state.trips.find((item) => item.id === id));
   const mapRef = useRef<AeraMapHandle>(null);
@@ -36,7 +38,7 @@ export default function TripDetailScreen() {
   if (!trip) {
     return (
       <View style={[styles.fill, { backgroundColor: theme.colors.background }]}>
-        <ErrorState title="Safar nahi mila" message="Ye safar is phone ki list mein nahi hai." actionLabel="Wapas" onAction={() => router.back()} />
+        <ErrorState title={t('trips.notFoundTitle')} message={t('trips.notFoundBody')} actionLabel={t('common.back')} onAction={() => router.back()} />
       </View>
     );
   }
@@ -65,27 +67,27 @@ export default function TripDetailScreen() {
           />
         </View>
         <MetricGrid style={{ marginTop: 16, paddingHorizontal: gutter }}>
-          <MetricCard label="Doori" value={formatDistance(trip.distanceMeters, units)} />
-          <MetricCard label="Time" value={formatDuration(trip.durationSeconds)} />
-          <MetricCard label="Average speed" value={formatSpeed(trip.averageSpeedMps, units)} unit={speedUnit(units)} />
-          <MetricCard label="Sabse tez" value={formatSpeed(trip.maxSpeedMps, units)} unit={speedUnit(units)} />
-          {trip.movingTimeSeconds !== undefined ? <MetricCard label="Chalte" value={formatDuration(trip.movingTimeSeconds)} /> : null}
-          {trip.stoppedTimeSeconds !== undefined ? <MetricCard label="Ruke" value={formatDuration(trip.stoppedTimeSeconds)} /> : null}
+          <MetricCard label={t('common.distance')} value={formatDistance(trip.distanceMeters, units)} />
+          <MetricCard label={t('common.time')} value={formatDuration(trip.durationSeconds)} />
+          <MetricCard label={t('navi.average')} value={formatSpeed(trip.averageSpeedMps, units)} unit={speedUnit(units)} />
+          <MetricCard label={t('navi.fastest')} value={formatSpeed(trip.maxSpeedMps, units)} unit={speedUnit(units)} />
+          {trip.movingTimeSeconds !== undefined ? <MetricCard label={t('navi.moving')} value={formatDuration(trip.movingTimeSeconds)} /> : null}
+          {trip.stoppedTimeSeconds !== undefined ? <MetricCard label={t('navi.stopped')} value={formatDuration(trip.stoppedTimeSeconds)} /> : null}
         </MetricGrid>
         <View style={[styles.summary, { backgroundColor: theme.colors.surface, marginHorizontal: gutter }]}>
           <AppText size={16} weight="semibold">
-            Rasta
+            {t('trips.route')}
           </AppText>
           <AppText size={14} color={theme.colors.mutedForeground} style={styles.copy}>
             {trip.routeSummary}
           </AppText>
           <AppText size={13} style={styles.copy}>
-            Shuru {formatClock(trip.startedAt)} · Khatam {formatClock(trip.endedAt)}
+            {t('trips.startedEnded', { start: formatClock(trip.startedAt), end: formatClock(trip.endedAt) })}
           </AppText>
           <AppText size={13} color={theme.colors.mutedForeground} style={styles.copy}>
-            {trip.sampleCount} location ke nishaan
-            {trip.routeProgress !== undefined ? ` · planned raste ka ${Math.round(trip.routeProgress * 100)}%` : ''}
-            {trip.recovered ? ' · app band hone ke baad save hua' : ''}
+            {t('trips.samples', { count: trip.sampleCount })}
+            {trip.routeProgress !== undefined ? ` · ${t('trips.progress', { percent: Math.round(trip.routeProgress * 100) })}` : ''}
+            {trip.recovered ? ` · ${t('trips.savedAfterClose')}` : ''}
           </AppText>
         </View>
       </View>

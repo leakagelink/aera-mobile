@@ -12,7 +12,9 @@ import { FloatingCard } from '@/components/ui/GlassCard';
 import { MetricCard } from '@/components/ui/MetricCard';
 import { ErrorState } from '@/components/ui/States';
 import { useForegroundLocation } from '@/features/location/useForegroundLocation';
+import { limitCopy } from '@/features/routing/instructions';
 import { shareEta } from '@/features/navigation/shareEta';
+import { useT } from '@/i18n';
 import { useJourneyRoutes } from '@/features/routing/useJourneyRoutes';
 import { useRouteTraffic } from '@/features/traffic/useRouteTraffic';
 import { useLocationStore } from '@/store/locationStore';
@@ -29,6 +31,7 @@ export default function DestinationScreen() {
   useForegroundLocation(focused, 'browse');
   const router = useRouter();
   const theme = useTheme();
+  const { t } = useT();
   const insets = useSafeAreaInsets();
   const mapRef = useRef<AeraMapHandle>(null);
   const origin = useSessionStore((state) => state.origin);
@@ -55,7 +58,7 @@ export default function DestinationScreen() {
   if (!destination) {
     return (
       <View style={[styles.fill, { backgroundColor: theme.colors.background }]}>
-        <ErrorState title="Manzil nahi hai" message="Directions se pehle jagah dhoondo." actionLabel="Dhoondo" onAction={() => router.replace('/search')} />
+        <ErrorState title={t('route.missingTitle')} message={t('route.missingBody')} actionLabel={t('route.search')} onAction={() => router.replace('/search')} />
       </View>
     );
   }
@@ -74,11 +77,11 @@ export default function DestinationScreen() {
         traffic={traffic.lines}
       />
       <View style={[styles.back, { top: insets.top + 8 }]}>
-        <IconButton icon={ArrowLeft} label="Wapas" onPress={() => router.back()} />
+        <IconButton icon={ArrowLeft} label={t('common.back')} onPress={() => router.back()} />
       </View>
       <FloatingCard style={[styles.card, { marginBottom: insets.bottom + 12 }]}>
         <AppText size={13} color={theme.colors.mutedForeground} numberOfLines={1}>
-          Yahan se {origin?.name ?? 'Aapki jagah'}
+          {t('route.from', { name: origin?.name ?? t('journey.here') })}
         </AppText>
         <View style={styles.modes}>
           <TravelModeBar />
@@ -90,22 +93,22 @@ export default function DestinationScreen() {
           {destination.address}
         </AppText>
         <View style={styles.metrics}>
-          <MetricCard compact label="Seedhi doori" value={straightLine} />
+          <MetricCard compact label={t('route.straight')} value={straightLine} />
           <MetricCard compact label={modeLabel} value={route ? formatDuration(route.durationSeconds) : routes.isFetching ? '…' : '—'} />
-          <MetricCard compact label="Doori" value={route ? formatDistance(route.distanceMeters, units) : '—'} />
+          <MetricCard compact label={t('common.distance')} value={route ? formatDistance(route.distanceMeters, units) : '—'} />
         </View>
         {routes.isError ? (
           <AppText size={13} color={theme.colors.error} style={styles.error}>
             {errorMessage(routes.error)}
           </AppText>
         ) : null}
-        {!start ? <AppText size={13} color={theme.colors.mutedForeground} style={styles.error}>Shuru ki jagah set karo, ya location on karo, tab rasta niklega.</AppText> : null}
-        {route?.limitNote ? <AppText size={13} color={theme.colors.mutedForeground} style={styles.error}>{route.limitNote}</AppText> : null}
+        {!start ? <AppText size={13} color={theme.colors.mutedForeground} style={styles.error}>{t('route.needStart')}</AppText> : null}
+        {route?.limitNote ? <AppText size={13} color={theme.colors.mutedForeground} style={styles.error}>{limitCopy(route.limitNote)}</AppText> : null}
         {traffic.note ? <AppText size={13} color={theme.colors.mutedForeground} style={styles.error}>{traffic.note}</AppText> : null}
         {route ? (
           <Pressable accessibilityRole="button" onPress={() => void shareEta({ destination: destination.name, seconds: route.durationSeconds, meters: route.distanceMeters, units })}>
             <AppText size={13} weight="semibold" color={theme.colors.primary} style={styles.error}>
-              ETA bhejo
+              {t('map.shareEta')}
             </AppText>
           </Pressable>
         ) : null}
@@ -115,11 +118,11 @@ export default function DestinationScreen() {
           onPress={() => router.push('/routes')}
           style={styles.button}
         >
-          Rasta dekho
+          {t('journey.seeRoute')}
         </PrimaryButton>
         {routes.isError ? (
           <PrimaryButton onPress={() => void routes.refetch()} style={styles.retry}>
-            Rasta dobara
+            {t('common.retry')}
           </PrimaryButton>
         ) : null}
       </FloatingCard>

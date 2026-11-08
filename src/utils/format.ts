@@ -1,3 +1,5 @@
+import { localeTag, t } from '@/i18n';
+
 export type UnitSystem = 'metric' | 'imperial';
 
 export function formatDistance(meters: number, units: UnitSystem): string {
@@ -13,11 +15,11 @@ export function formatDistance(meters: number, units: UnitSystem): string {
 
 export function formatDuration(seconds: number): string {
   const safe = Number.isFinite(seconds) ? Math.max(0, Math.round(seconds)) : 0;
-  if (safe < 45) return '< 1 min';
+  if (safe < 45) return t('duration.under');
   const hours = Math.floor(safe / 3600);
   const minutes = Math.round((safe % 3600) / 60);
-  if (hours <= 0) return `${Math.max(1, Math.round(safe / 60))} min`;
-  return minutes > 0 ? `${hours} h ${minutes} min` : `${hours} h`;
+  if (hours <= 0) return t('duration.minutes', { count: Math.max(1, Math.round(safe / 60)) });
+  return minutes > 0 ? t('duration.hoursMinutes', { hours, minutes }) : t('duration.hours', { count: hours });
 }
 
 export function formatSpeed(metersPerSecond: number | null, units: UnitSystem): string {
@@ -39,9 +41,9 @@ export function formatDay(timestamp: number): string {
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
-  if (sameDay(date, today)) return 'Today';
-  if (sameDay(date, yesterday)) return 'Yesterday';
-  return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  if (sameDay(date, today)) return t('common.today');
+  if (sameDay(date, yesterday)) return t('common.yesterday');
+  return date.toLocaleDateString(localeTag(), { month: 'short', day: 'numeric' });
 }
 
 function sameDay(a: Date, b: Date): boolean {

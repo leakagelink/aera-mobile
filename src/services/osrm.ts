@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { t } from '@/i18n';
 import { instructionFor } from '@/features/routing/instructions';
 import { env } from '@/services/env';
 import { requestJson } from '@/services/http';
@@ -31,12 +32,7 @@ const routeSchema = z.object({
     z.object({
       summary: z.string().optional(),
       steps: z.array(stepSchema).optional(),
-      annotation: z
-        .object({
-          distance: z.array(z.number()).optional(),
-          duration: z.array(z.number()).optional(),
-        })
-        .optional(),
+      annotation: z.unknown().optional(),
     }),
   ),
 });
@@ -56,80 +52,74 @@ export async function fetchRoutes(
   limits?: RouteLimits,
 ): Promise<RouteAlternative[]> {
   if (!isValidCoordinate(origin.latitude, origin.longitude) || !isValidCoordinate(destination.latitude, destination.longitude)) {
-    throw new AppError('Choose a valid destination.', 'invalid');
+    throw new AppError('route.invalid', 'invalid');
   }
 
-  const exclude = excludeClasses(limits);
-  const first = await requestRoute(origin, destination, profile, signal, exclude);
-  if (exclude && isUnsupportedExclude(first)) {
-    const plain = await requestRoute(origin, destination, profile, signal);
+  const filtered = Boolean(limits?.avoidTolls || limits?.avoidHighways);
+  try {
+    const first = await requestValhalla(origin, destination, mode, signal, limits);
+    return routesFrom(first, mode, filtered ? appliedLimitNote(limits) : null, filtered);
+  } catch (error) {
+    if (!filtered) throw error;
+    const plain = await requestValhalla(origin, destination, mode, signal);
     return routesFrom(plain, mode, unsupportedLimitNote(limits), false);
   }
-  return routesFrom(first, mode, exclude ? appliedLimitNote(limits) : null, Boolean(exclude));
 }
 
-function excludeClasses(limits?: RouteLimits): string {
-  const parts: string[] = [];
-  if (limits?.avoidTolls) parts.push('toll');
-  if (limits?.avoidHighways) parts.push('motorway');
-  return parts.join(',');
+const MODE_COSTING: Record<TravelMode, 'pedestrian' | 'bicycle' | 'motorcycle' | 'auto'> = {
+  walk: 'pedestrian',
+  bicycle: 'bicycle',
+  motorcycle: 'motorcycle',
+  car: 'auto',
+};
+
+async function requestValhalla(
+  origin: Coordinate,
+  destination: Coordinate,
+  mode: TravelMode,
+  signal?: AbortSignal,
+  limits?: RouteLimits,
+): Promise<OsrmRoutePayload> {
+  const costing = MODE_COSTING[mode];
+  const options: Record<string, number> = {};
+  if (limits?.avoidHighways) options.use_highways = 0;
+  if (limits?.avoidTolls) options.use_tolls = 0;
+  const body: Record<string, unknown> = {
+    locations: [
+      { lat: origin.latitude, lon: origin.longitude },
+      { lat: destination.latitude, lon: destination.longitude },
+    ],
+    costing,
+    format: 'osrm',
+    shape_format: 'geojson',
+    alternates: 1,
+  };
+  if (Object.keys(options).length > 0) body.costing_options = { [costing]: options };
+  const payload = await requestJson('https://valhalla1.openstreetmap.de/route', {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json', 'User-Agent': env.geocodingUserAgent },
+    signal,
+    timeoutMs: 15_000,
+  });
+  const parsed = responseSchema.safeParse(payload);
+  if (!parsed.success) throw new AppError('route.unexpected', 'osrm');
+  return parsed.data;
 }
 
 function unsupportedLimitNote(limits?: RouteLimits): string {
-  if (limits?.avoidTolls && limits?.avoidHighways) {
-    return 'Toll aur highway filter nahi laga. Ye routing server unhe hata kar rasta nahi nikalta. Dikha hua rasta normal hai.';
-  }
-  if (limits?.avoidTolls) {
-    return 'Toll filter nahi laga. Ye routing server toll hata kar rasta nahi nikalta. Dikha hua rasta normal hai.';
-  }
-  return 'Highway filter nahi laga. Ye routing server highway hata kar rasta nahi nikalta. Dikha hua rasta normal hai.';
+  if (limits?.avoidTolls && limits?.avoidHighways) return 'limit.unsupportedBoth';
+  if (limits?.avoidTolls) return 'limit.unsupportedToll';
+  return 'limit.unsupportedHighway';
 }
 
 function appliedLimitNote(limits?: RouteLimits): string {
-  if (limits?.avoidTolls && limits?.avoidHighways) return 'Ye rasta toll aur highway ke bina hai.';
-  if (limits?.avoidTolls) return 'Ye rasta toll ke bina hai.';
-  return 'Ye rasta highway ke bina hai.';
-}
-
-function isUnsupportedExclude(payload: OsrmRoutePayload | { unsupported: true }): payload is { unsupported: true } {
-  return 'unsupported' in payload;
+  if (limits?.avoidTolls && limits?.avoidHighways) return 'limit.appliedBoth';
+  if (limits?.avoidTolls) return 'limit.appliedToll';
+  return 'limit.appliedHighway';
 }
 
 type OsrmRoutePayload = z.infer<typeof responseSchema>;
-
-async function requestRoute(
-  origin: Coordinate,
-  destination: Coordinate,
-  profile: OsrmProfile,
-  signal?: AbortSignal,
-  exclude?: string,
-): Promise<OsrmRoutePayload | { unsupported: true }> {
-  const path = `${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}`;
-  const url = new URL(`/route/v1/${profile}/${path}`, env.routingBaseUrl);
-  url.searchParams.set('overview', 'full');
-  url.searchParams.set('geometries', 'geojson');
-  url.searchParams.set('steps', 'true');
-  url.searchParams.set('alternatives', 'true');
-  url.searchParams.set('annotations', 'distance,duration');
-  if (exclude) url.searchParams.set('exclude', exclude);
-
-  try {
-    const payload = await requestJson(url.toString(), {
-      headers: { 'User-Agent': env.geocodingUserAgent },
-      signal,
-      timeoutMs: 15_000,
-    });
-    const parsed = responseSchema.safeParse(payload);
-    if (!parsed.success) throw new AppError('Routing returned an unexpected response.', 'osrm');
-    if (exclude && parsed.data.code === 'InvalidOptions') return { unsupported: true };
-    return parsed.data;
-  } catch (error) {
-    if (exclude && error instanceof AppError && /exclude|not supported|invalidoptions|request failed \(400\)/i.test(error.message)) {
-      return { unsupported: true };
-    }
-    throw error;
-  }
-}
 
 function routesFrom(
   payload: OsrmRoutePayload | { unsupported: true },
@@ -144,9 +134,9 @@ function routesFrom(
     throw new AppError(
       unavailable
         ? filtered
-          ? 'Toll ya highway ke bina koi rasta nahi mila.'
-          : `No ${travelModeLabel(mode).toLowerCase()} route is available between these places.`
-        : message || 'Routing failed. Try again.',
+          ? 'route.noneFiltered'
+          : t('route.nonePlain', { mode: travelModeLabel(mode) })
+        : message || 'route.failed',
       'osrm',
     );
   }
@@ -160,17 +150,17 @@ function toRoute(route: z.infer<typeof routeSchema>, index: number, mode: Travel
     isValidCoordinate(latitude, longitude) ? [{ latitude, longitude }] : [],
   );
   if (geometry.length < 2) {
-    throw new AppError('The route geometry was incomplete.', 'osrm');
+    throw new AppError('route.incomplete', 'osrm');
   }
-  const distances = route.legs.flatMap((leg) => leg.annotation?.distance ?? []);
-  const durations = route.legs.flatMap((leg) => leg.annotation?.duration ?? []);
+  const distances = route.legs.flatMap((leg) => numberList(leg.annotation, 'distance'));
+  const durations = route.legs.flatMap((leg) => numberList(leg.annotation, 'duration'));
   return {
     id: `osrm-${mode}-${index}`,
     provider: 'osrm',
-    label: index === 0 ? 'Ye rasta' : `Doosra ${index}`,
+    label: index === 0 ? 'route.this' : `route.other:${index}`,
     distanceMeters: route.distance,
     durationSeconds: route.duration,
-    summary: summary || steps.find((step) => step.name)?.name || `${travelModeLabel(mode)} ka rasta`,
+    summary: summary || steps.find((step) => step.name)?.name || t('route.viaMode', { mode: travelModeLabel(mode) }),
     geometry,
     steps,
     annotations:
@@ -178,6 +168,12 @@ function toRoute(route: z.infer<typeof routeSchema>, index: number, mode: Travel
         ? { segmentDistancesMeters: distances, segmentDurationsSeconds: durations }
         : undefined,
   };
+}
+
+function numberList(value: unknown, key: 'distance' | 'duration'): number[] {
+  if (!value || typeof value !== 'object' || !(key in value)) return [];
+  const list = (value as Record<string, unknown>)[key];
+  return Array.isArray(list) && list.every((item) => typeof item === 'number') ? list : [];
 }
 
 const nearestSchema = z.object({

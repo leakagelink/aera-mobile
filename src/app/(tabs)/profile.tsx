@@ -15,11 +15,13 @@ import { errorMessage } from '@/utils/errors';
 import { radius } from '@/theme';
 import { useResponsive } from '@/theme/useResponsive';
 import { useTheme } from '@/theme/useTheme';
+import { useT } from '@/i18n';
 import { formatDistance, formatDuration } from '@/utils/format';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const { t } = useT();
   const insets = useSafeAreaInsets();
   const { compact, gutter, maxContent, tabClearance } = useResponsive();
   const units = usePreferencesStore((state) => state.units);
@@ -31,15 +33,15 @@ export default function ProfileScreen() {
   const token = useAccountStore((state) => state.token);
 
   function confirmDeleteAccount() {
-    Alert.alert('Arah account mita dein?', 'Server wala account aur is phone ki trip list hat jayegi. Wapas nahi aayegi.', [
-      { text: 'Rehne do', style: 'cancel' },
+    Alert.alert(t('profile.deleteTitle'), t('profile.deleteBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Account mitao',
+        text: t('profile.deleteAccount'),
         style: 'destructive',
         onPress: () => {
           void deleteArahAccount()
-            .then(() => Alert.alert('Account mit gaya', 'Arah account aur is phone ki trip list hat gayi.'))
-            .catch((caught: unknown) => Alert.alert('Account nahi mita', errorMessage(caught, 'Dobara try karo.')));
+            .then(() => Alert.alert(t('profile.deletedTitle'), t('profile.deletedBody')))
+            .catch((caught: unknown) => Alert.alert(t('profile.deleteFailed'), errorMessage(caught, t('profile.tryAgain'))));
         },
       },
     ]);
@@ -59,25 +61,25 @@ export default function ProfileScreen() {
             {email && token ? email : 'Arah'}
           </AppText>
           <AppText size={14} color={theme.colors.mutedForeground} style={styles.subtitle}>
-            {email && token ? 'Sign in hai. Safar is phone par rehta hai.' : 'Safar is phone par rehta hai.'}
+            {email && token ? t('profile.signedIn') : t('profile.local')}
           </AppText>
         </View>
       </View>
       <View style={[styles.column, { maxWidth: maxContent, paddingHorizontal: gutter }]}>
         <MetricGrid style={styles.metrics}>
-          <MetricCard label="Doori" value={formatDistance(distance, units)} />
-          <MetricCard label="Safar" value={String(trips.length)} />
-          <MetricCard label="Time" value={formatDuration(duration)} />
-          <MetricCard label="Average" value={formatDistance(average, units)} />
+          <MetricCard label={t('common.distance')} value={formatDistance(distance, units)} />
+          <MetricCard label={t('nav.trips')} value={String(trips.length)} />
+          <MetricCard label={t('common.time')} value={formatDuration(duration)} />
+          <MetricCard label={t('navi.average')} value={formatDistance(average, units)} />
         </MetricGrid>
       <View style={[styles.list, { backgroundColor: theme.colors.surface }]}>
-        <Row icon={History} label="Safar ki list" onPress={() => router.push('/trips')} />
-        <Row icon={ShieldCheck} label="Privacy" onPress={() => router.push('/privacy')} />
-        <Row icon={Info} label="Privacy policy" onPress={() => void Linking.openURL(arahPolicyUrls.privacy)} />
-        <Row icon={Info} label="Terms" onPress={() => void Linking.openURL(arahPolicyUrls.terms)} />
-        <Row icon={MapPin} label="Location" onPress={() => router.push('/permission')} />
-        <Row icon={Settings2} label="Setting" onPress={() => router.push('/settings')} />
-        {token ? <Row icon={UserRound} label="Account mitao" onPress={confirmDeleteAccount} /> : null}
+        <Row icon={History} label={t('profile.tripList')} onPress={() => router.push('/trips')} />
+        <Row icon={ShieldCheck} label={t('common.privacy')} onPress={() => router.push('/privacy')} />
+        <Row icon={Info} label={t('profile.privacyPolicy')} onPress={() => void Linking.openURL(arahPolicyUrls.privacy)} />
+        <Row icon={Info} label={t('common.terms')} onPress={() => void Linking.openURL(arahPolicyUrls.terms)} />
+        <Row icon={MapPin} label={t('profile.location')} onPress={() => router.push('/permission')} />
+        <Row icon={Settings2} label={t('profile.settings')} onPress={() => router.push('/settings')} />
+        {token ? <Row icon={UserRound} label={t('profile.deleteAccount')} onPress={confirmDeleteAccount} /> : null}
       </View>
       </View>
     </ScrollView>

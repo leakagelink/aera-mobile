@@ -4,6 +4,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 
 import { lineCollection, namedPoints, pointFeature, trafficCollection } from '@/components/map/geojson';
 import { ErrorState } from '@/components/ui/States';
+import { t } from '@/i18n';
 import { mapStyleProvider } from '@/services/providers';
 import type { Coordinate } from '@/types/location';
 import type { Place } from '@/types/place';
@@ -202,7 +203,7 @@ export const AeraMap = forwardRef<AeraMapHandle, Props>(function AeraMap({ user,
           </GeoJSONSource>
         ) : null}
         {destination ? (
-          <GeoJSONSource id="destination" data={namedPoints([{ name: destination.name?.trim() || 'Yahan jana hai', latitude: destination.latitude, longitude: destination.longitude }])}>
+          <GeoJSONSource id="destination" data={namedPoints([{ name: destination.name?.trim() || t('map.goingHere'), latitude: destination.latitude, longitude: destination.longitude }])}>
             <Layer
               id="destination-dot"
               type="circle"

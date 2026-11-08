@@ -18,8 +18,10 @@ export function hasArrived(remainingMeters: number, offRoute: boolean, accuracy:
   return !offRoute && remainingMeters <= 40 && (accuracy === null || accuracy <= 50);
 }
 
+import { t } from '@/i18n';
+
 export function gpsWarning(accuracy: number | null, locationAgeMs: number): string | null {
-  if (locationAgeMs > 15_000) return 'GPS signal nahi mil raha. Nayi location ka intezaar hai.';
-  if (accuracy !== null && accuracy > 80) return 'GPS kamzor hai. Map par jagah thodi hil sakti hai.';
+  if (locationAgeMs > 15_000) return t('navi.gpsLost');
+  if (accuracy !== null && accuracy > 80) return t('navi.gpsWeak');
   return null;
 }

@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '@/components/ui/AppText';
 import { PrimaryButton, SecondaryButton } from '@/components/ui/Buttons';
 import { LogoMark } from '@/components/ui/LogoMark';
+import { useT } from '@/i18n';
 import { requestForegroundPermission } from '@/features/location/locationEngine';
 import { usePreferencesStore } from '@/store/preferencesStore';
 import { useTheme } from '@/theme/useTheme';
@@ -13,6 +14,7 @@ import { useTheme } from '@/theme/useTheme';
 export default function PermissionRoute() {
   const router = useRouter();
   const theme = useTheme();
+  const { t } = useT();
   const insets = useSafeAreaInsets();
   const markSeen = usePreferencesStore((state) => state.markLocationPromptSeen);
 
@@ -35,25 +37,25 @@ export default function PermissionRoute() {
           <MapPin color={theme.colors.primary} size={42} fill={theme.colors.primary} />
         </View>
         <AppText size={34} weight="semibold" style={styles.title}>
-          Location se rasta chalta hai.
+          {t('permission.title')}
         </AppText>
         <AppText size={16} color={theme.colors.mutedForeground} style={styles.copy}>
-          Arah location tab use karta hai jab app khuli ho: aapki jagah, rasta, aur trip tabhi record jab aap shuru karo. Background mein nahi chalta.
+          {t('permission.body')}
         </AppText>
         <View style={[styles.note, { backgroundColor: `${theme.colors.success}1A` }]}>
           <ShieldCheck color={theme.colors.success} size={16} />
           <AppText size={12} weight="semibold" color={theme.colors.success}>
-            Trip tab record hoti hai jab aap chaho
+            {t('permission.note')}
           </AppText>
         </View>
       </View>
-      <PrimaryButton onPress={() => void allow()}>Location on karo</PrimaryButton>
+      <PrimaryButton onPress={() => void allow()}>{t('permission.allow')}</PrimaryButton>
       <SecondaryButton onPress={goMap} style={styles.secondary}>
-        Abhi nahi
+        {t('permission.later')}
       </SecondaryButton>
       <Pressable accessibilityRole="button" onPress={() => router.push('/privacy')} style={styles.privacy}>
         <AppText size={12} weight="medium" color={theme.colors.mutedForeground}>
-          Privacy
+          {t('common.privacy')}
         </AppText>
       </Pressable>
     </View>

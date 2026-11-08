@@ -15,6 +15,7 @@ import { useAutoTrip } from '@/features/trips/useAutoTrip';
 import { useForegroundLocation } from '@/features/location/useForegroundLocation';
 import { useAroundYou } from '@/features/map/useAroundYou';
 import { useNearbyCategory } from '@/features/map/useNearbyCategory';
+import { limitCopy } from '@/features/routing/instructions';
 import { shareEta } from '@/features/navigation/shareEta';
 import { useJourneyRoutes } from '@/features/routing/useJourneyRoutes';
 import { useRouteTraffic } from '@/features/traffic/useRouteTraffic';
@@ -26,16 +27,17 @@ import { usePreferencesStore } from '@/store/preferencesStore';
 import { selectedRoute, useSessionStore } from '@/store/sessionStore';
 import { radius } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
+import { useT, type MessageKey } from '@/i18n';
 
-const suggestions = [
-  { id: 'hospital', label: 'Aspatal', query: 'hospital', radius: 5_000, icon: Hospital },
-  { id: 'fuel', label: 'Petrol', query: 'fuel', radius: 5_000, icon: Fuel },
-  { id: 'coffee', label: 'Coffee', query: 'cafe', radius: 3_000, icon: Coffee },
-  { id: 'food', label: 'Khana', query: 'restaurant', radius: 3_000, icon: Utensils },
-  { id: 'parking', label: 'Parking', query: 'parking', radius: 2_000, icon: ParkingCircle },
-  { id: 'parks', label: 'Park', query: 'park', radius: 3_000, icon: Trees },
-  { id: 'airport', label: 'Airport', query: 'airport', radius: 40_000, icon: Plane },
-  { id: 'station', label: 'Station', query: '[railway=station]', radius: 15_000, icon: TrainFront },
+const suggestions: { id: string; label: MessageKey; query: string; radius: number; icon: typeof Hospital }[] = [
+  { id: 'hospital', label: 'place.hospital', query: 'hospital', radius: 5_000, icon: Hospital },
+  { id: 'fuel', label: 'place.fuel', query: 'fuel', radius: 5_000, icon: Fuel },
+  { id: 'coffee', label: 'place.coffee', query: 'cafe', radius: 3_000, icon: Coffee },
+  { id: 'food', label: 'place.food', query: 'restaurant', radius: 3_000, icon: Utensils },
+  { id: 'parking', label: 'place.parking', query: 'parking', radius: 2_000, icon: ParkingCircle },
+  { id: 'parks', label: 'place.park', query: 'park', radius: 3_000, icon: Trees },
+  { id: 'airport', label: 'place.airport', query: 'airport', radius: 40_000, icon: Plane },
+  { id: 'station', label: 'place.station', query: '[railway=station]', radius: 15_000, icon: TrainFront },
 ];
 
 export default function MapScreen() {
@@ -44,6 +46,7 @@ export default function MapScreen() {
   useAutoTrip(focused);
   const router = useRouter();
   const theme = useTheme();
+  const { t } = useT();
   const insets = useSafeAreaInsets();
   const mapRef = useRef<AeraMapHandle>(null);
   const [follow, setFollow] = useState(true);
@@ -100,7 +103,7 @@ export default function MapScreen() {
     setFollow(false);
     useSessionStore.getState().setDestination({
       id: `saved:${kind}`,
-      name: kind === 'home' ? 'Ghar' : 'Office',
+      name: kind === 'home' ? t('common.home') : t('common.work'),
       address: saved.address,
       latitude: saved.latitude,
       longitude: saved.longitude,
@@ -124,12 +127,12 @@ export default function MapScreen() {
         <View style={styles.savedRow}>
           <Pressable accessibilityRole="button" onPress={() => openSaved('home')} style={[styles.chip, { backgroundColor: theme.colors.nav, borderColor: theme.colors.glassBorder }]}>
             <AppText size={13} weight="semibold">
-              {home ? 'Ghar' : 'Ghar set karo'}
+              {home ? t('common.home') : t('map.homeSet')}
             </AppText>
           </Pressable>
           <Pressable accessibilityRole="button" onPress={() => openSaved('work')} style={[styles.chip, { backgroundColor: theme.colors.nav, borderColor: theme.colors.glassBorder }]}>
             <AppText size={13} weight="semibold">
-              {work ? 'Office' : 'Office set karo'}
+              {work ? t('common.work') : t('map.workSet')}
             </AppText>
           </Pressable>
         </View>
@@ -156,7 +159,7 @@ export default function MapScreen() {
               >
                 <Icon color={active ? theme.colors.primaryForeground : theme.colors.foreground} size={14} />
                 <AppText size={12} weight="medium" color={active ? theme.colors.primaryForeground : theme.colors.foreground}>
-                  {item.label}
+                  {t(item.label)}
                 </AppText>
               </Pressable>
             );
@@ -165,20 +168,20 @@ export default function MapScreen() {
         {destination ? (
           <Pressable accessibilityRole="button" onPress={() => router.push('/destination')} style={[styles.here, { backgroundColor: theme.colors.nav, borderColor: theme.colors.glassBorder }]}>
             <AppText size={13} weight="semibold">
-              Jaana hai: {destination.name}
+              {t('map.going', { name: destination.name })}
             </AppText>
             <AppText size={12} color={theme.colors.mutedForeground}>
               {route
-                ? `Neela rasta · ${formatDuration(route.durationSeconds)} · ${formatDistance(route.distanceMeters)}`
+                ? t('map.routeReady', { time: formatDuration(route.durationSeconds), distance: formatDistance(route.distanceMeters) })
                 : journey.isFetching
-                  ? 'Asli rasta nikal raha hai…'
+                  ? t('map.finding')
                   : journey.isError
                     ? errorMessage(journey.error)
-                    : 'Neela rasta abhi nahi hai. Is card par tap karke directions kholo.'}
+                    : t('map.noRoute')}
             </AppText>
             {route?.limitNote ? (
               <AppText size={12} color={theme.colors.mutedForeground}>
-                {route.limitNote}
+                {limitCopy(route.limitNote)}
               </AppText>
             ) : null}
             {traffic.note ? (
@@ -195,7 +198,7 @@ export default function MapScreen() {
                 }}
               >
                 <AppText size={13} weight="semibold" color={theme.colors.primary}>
-                  ETA bhejo
+                  {t('map.shareEta')}
                 </AppText>
               </Pressable>
             ) : null}
@@ -204,28 +207,28 @@ export default function MapScreen() {
         {here && !destination ? (
           <View style={[styles.here, { backgroundColor: theme.colors.nav, borderColor: theme.colors.glassBorder }]}>
             <AppText size={13} weight="semibold">
-              Aap yahan ho: {here}
+              {t('map.youAre', { place: here })}
             </AppText>
           </View>
         ) : null}
         {selected && !location ? (
           <View style={[styles.here, { backgroundColor: theme.colors.nav, borderColor: theme.colors.glassBorder }]}>
             <AppText size={13} weight="semibold">
-              {selected.label} ke liye location chahiye.
+              {t('map.needLocation', { place: t(selected.label) })}
             </AppText>
           </View>
         ) : null}
         {selected && location && category.loading ? (
           <View style={[styles.here, { backgroundColor: theme.colors.nav, borderColor: theme.colors.glassBorder }]}>
             <AppText size={13} weight="semibold">
-              {selected.label} dhoondh raha hoon…
+              {t('map.searching', { place: t(selected.label) })}
             </AppText>
           </View>
         ) : null}
         {selected && location && !category.loading && category.places.length === 0 ? (
           <View style={[styles.here, { backgroundColor: theme.colors.nav, borderColor: theme.colors.glassBorder }]}>
             <AppText size={13} weight="semibold">
-              Paas mein {selected.label} nahi mila.
+              {t('map.noneNearby', { place: t(selected.label) })}
             </AppText>
           </View>
         ) : null}
@@ -257,7 +260,7 @@ export default function MapScreen() {
       <View style={styles.actions}>
         <IconButton
           icon={LocateFixed}
-          label="Map wapas lao"
+          label={t('map.recenter')}
           primary={follow}
           onPress={() => {
             setFollow(true);
@@ -281,10 +284,10 @@ export default function MapScreen() {
           style={[styles.banner, { bottom: insets.bottom + 96, backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
         >
           <AppText size={14} weight="semibold">
-            {permission === 'denied' ? 'Location band hai' : 'Raste ke liye location chahiye'}
+            {permission === 'denied' ? t('map.locationOff') : t('map.locationNeeded')}
           </AppText>
           <AppText size={12} color={theme.colors.mutedForeground}>
-            Tap karke location on karo. Background mein nahi chalti.
+            {t('map.locationHint')}
           </AppText>
         </Pressable>
       ) : null}

@@ -9,6 +9,7 @@ import { AppText } from '@/components/ui/AppText';
 import { PrimaryButton, SecondaryButton } from '@/components/ui/Buttons';
 import { MetricCard } from '@/components/ui/MetricCard';
 import { ErrorState } from '@/components/ui/States';
+import { useT } from '@/i18n';
 import { usePreferencesStore } from '@/store/preferencesStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { radius } from '@/theme';
@@ -19,6 +20,7 @@ export default function TripCompleteScreen() {
   const router = useRouter();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { t } = useT();
   const units = usePreferencesStore((state) => state.units);
   const trip = useSessionStore((state) => state.completedTrip);
   const clearJourney = useSessionStore((state) => state.clearJourney);
@@ -33,7 +35,7 @@ export default function TripCompleteScreen() {
   if (!trip) {
     return (
       <View style={[styles.fill, { backgroundColor: theme.colors.background }]}>
-        <ErrorState title="Koi safar nahi" message="Navigation khatam karo, tab yahan summary aayegi." actionLabel="Map par wapas" onAction={() => router.replace('/map')} />
+        <ErrorState title={t('navi.noTripTitle')} message={t('navi.noTripBody')} actionLabel={t('navi.backToMap')} onAction={() => router.replace('/map')} />
       </View>
     );
   }
@@ -49,27 +51,27 @@ export default function TripCompleteScreen() {
         <Check color={theme.colors.success} size={42} strokeWidth={2.5} />
       </View>
       <AppText size={36} weight="semibold" style={styles.title}>
-        Safar khatam
+        {t('navi.tripDone')}
       </AppText>
       <AppText size={14} color={theme.colors.mutedForeground}>
         {trip.originName} → {trip.destinationName}
       </AppText>
       <View style={styles.metrics}>
-        <MetricCard label="Doori" value={formatDistance(trip.distanceMeters, units)} />
-        <MetricCard label="Time" value={formatDuration(trip.durationSeconds)} />
-        <MetricCard label="Average speed" value={formatSpeed(trip.averageSpeedMps, units)} unit={speedUnit(units)} />
-        <MetricCard label="Sabse tez" value={formatSpeed(trip.maxSpeedMps, units)} unit={speedUnit(units)} />
-        {trip.movingTimeSeconds !== undefined ? <MetricCard label="Chalte" value={formatDuration(trip.movingTimeSeconds)} /> : null}
-        {trip.stoppedTimeSeconds !== undefined ? <MetricCard label="Ruke" value={formatDuration(trip.stoppedTimeSeconds)} /> : null}
+        <MetricCard label={t('common.distance')} value={formatDistance(trip.distanceMeters, units)} />
+        <MetricCard label={t('common.time')} value={formatDuration(trip.durationSeconds)} />
+        <MetricCard label={t('navi.average')} value={formatSpeed(trip.averageSpeedMps, units)} unit={speedUnit(units)} />
+        <MetricCard label={t('navi.fastest')} value={formatSpeed(trip.maxSpeedMps, units)} unit={speedUnit(units)} />
+        {trip.movingTimeSeconds !== undefined ? <MetricCard label={t('navi.moving')} value={formatDuration(trip.movingTimeSeconds)} /> : null}
+        {trip.stoppedTimeSeconds !== undefined ? <MetricCard label={t('navi.stopped')} value={formatDuration(trip.stoppedTimeSeconds)} /> : null}
       </View>
       <View style={[styles.times, { backgroundColor: theme.colors.surface }]}>
-        <AppText size={14}>Shuru {formatClock(trip.startedAt)}</AppText>
-        <AppText size={14}>Khatam {formatClock(trip.endedAt)}</AppText>
+        <AppText size={14}>{t('navi.started', { time: formatClock(trip.startedAt) })}</AppText>
+        <AppText size={14}>{t('navi.ended', { time: formatClock(trip.endedAt) })}</AppText>
         <AppText size={13} color={theme.colors.mutedForeground}>
           {trip.routeSummary}
         </AppText>
         <AppText size={12} color={theme.colors.mutedForeground}>
-          {trip.sampleCount} location ke nishaan
+          {t('trips.samples', { count: trip.sampleCount })}
         </AppText>
       </View>
       <View style={styles.map}>
@@ -83,9 +85,9 @@ export default function TripCompleteScreen() {
           ]}
         />
       </View>
-      <PrimaryButton onPress={() => router.push({ pathname: '/trip/[id]', params: { id: trip.id } })}>Safar dekho</PrimaryButton>
+      <PrimaryButton onPress={() => router.push({ pathname: '/trip/[id]', params: { id: trip.id } })}>{t('navi.seeTrip')}</PrimaryButton>
       <SecondaryButton onPress={goMap} style={styles.secondary}>
-        Map par wapas
+        {t('navi.backToMap')}
       </SecondaryButton>
     </ScrollView>
   );

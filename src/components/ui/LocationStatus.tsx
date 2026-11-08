@@ -1,5 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
+import { useT } from '@/i18n';
 import { AppText } from '@/components/ui/AppText';
 import { useLocationStore } from '@/store/locationStore';
 import { radius } from '@/theme';
@@ -11,27 +12,28 @@ type Props = {
 
 export function LocationStatus({ recording = false }: Props) {
   const theme = useTheme();
+  const { t } = useT();
   const permission = useLocationStore((state) => state.permission);
   const availability = useLocationStore((state) => state.availability);
   const accuracy = useLocationStore((state) => state.current?.accuracy ?? null);
   const watching = useLocationStore((state) => state.watching);
 
-  let label = 'Location band';
+  let label = t('status.off');
   let color: string = theme.colors.mutedForeground;
   if (recording) {
-    label = 'Trip record ho rahi hai';
+    label = t('status.recording');
     color = theme.colors.error;
   } else if (permission === 'denied') {
-    label = 'Location mana hai';
+    label = t('status.denied');
     color = theme.colors.error;
   } else if (availability === 'unavailable') {
-    label = 'GPS nahi mil raha';
+    label = t('status.gps');
     color = theme.colors.warning;
   } else if (watching && accuracy === null) {
-    label = 'Jagah dhoondh raha hoon';
+    label = t('status.searching');
     color = theme.colors.warning;
   } else if (permission === 'granted') {
-    label = accuracy !== null && accuracy > 30 ? `Location on · ±${Math.round(accuracy)} m` : 'Location on';
+    label = accuracy !== null && accuracy > 30 ? t('status.onAccurate', { meters: Math.round(accuracy) }) : t('status.on');
     color = theme.colors.success;
   }
 

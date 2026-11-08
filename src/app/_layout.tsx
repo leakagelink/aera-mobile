@@ -1,3 +1,4 @@
+import '@/features/location/locationEngine';
 import 'react-native-gesture-handler';
 
 import {

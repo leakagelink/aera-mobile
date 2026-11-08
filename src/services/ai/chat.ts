@@ -1,3 +1,4 @@
+import { appLanguage } from '@/i18n';
 import { aeraApiRequest } from '@/services/api/client';
 import { navigationSnapshot } from '@/features/navigation/progress';
 import { useHabitStore } from '@/store/habitStore';
@@ -137,8 +138,7 @@ function readCards(body: { cards?: unknown }): AiCard[] {
 }
 
 function replyLanguage() {
-  const language = usePreferencesStore.getState().assistantLanguage;
-  return language === 'auto' ? undefined : language;
+  return appLanguage();
 }
 
 function currentAiContext() {

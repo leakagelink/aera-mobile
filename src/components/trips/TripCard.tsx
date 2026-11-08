@@ -1,6 +1,7 @@
 import { ChevronRight } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { useT } from '@/i18n';
 import { AppText } from '@/components/ui/AppText';
 import { radius } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
@@ -15,6 +16,7 @@ type Props = {
 
 export function TripCard({ title, detail, onPress, onSelect, selected = false }: Props) {
   const theme = useTheme();
+  const { t } = useT();
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
       <View style={[styles.swatch, { backgroundColor: theme.colors.ink }]}>
@@ -31,7 +33,7 @@ export function TripCard({ title, detail, onPress, onSelect, selected = false }:
       {onSelect ? (
         <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onSelect} hitSlop={8}>
           <AppText size={12} weight="semibold" color={selected ? theme.colors.primary : theme.colors.mutedForeground}>
-            {selected ? 'Chuna' : 'Chuno'}
+            {selected ? t('trips.chosen') : t('trips.choose')}
           </AppText>
         </Pressable>
       ) : null}

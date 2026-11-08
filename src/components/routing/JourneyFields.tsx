@@ -3,6 +3,8 @@ import { ArrowUpDown } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { TravelModeBar } from '@/components/routing/TravelModeBar';
+import { limitCopy } from '@/features/routing/instructions';
+import { useT } from '@/i18n';
 import { AppText } from '@/components/ui/AppText';
 import { selectedRoute, useSessionStore } from '@/store/sessionStore';
 import { radius } from '@/theme';
@@ -11,6 +13,7 @@ import { useTheme } from '@/theme/useTheme';
 export function JourneyFields() {
   const router = useRouter();
   const theme = useTheme();
+  const { t } = useT();
   const origin = useSessionStore((state) => state.origin);
   const destination = useSessionStore((state) => state.destination);
   const setOrigin = useSessionStore((state) => state.setOrigin);
@@ -33,33 +36,33 @@ export function JourneyFields() {
     <View style={[styles.card, { backgroundColor: theme.colors.nav, borderColor: theme.colors.glassBorder }]}>
       <View style={styles.fields}>
         <View style={styles.stack}>
-          <Endpoint label="Yahan se" value={origin?.name ?? 'Aapki jagah'} onPress={() => router.push({ pathname: '/search', params: { field: 'origin' } })} />
+          <Endpoint label={t('journey.from')} value={origin?.name ?? t('journey.here')} onPress={() => router.push({ pathname: '/search', params: { field: 'origin' } })} />
           <View style={[styles.rule, { backgroundColor: theme.colors.glassBorder }]} />
           <Endpoint
-            label="Kahan"
-            value={destination?.name ?? 'Kahan jana hai?'}
+            label={t('journey.to')}
+            value={destination?.name ?? t('journey.where')}
             muted={!destination}
             onPress={() => router.push({ pathname: '/search', params: { field: 'destination' } })}
           />
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Shuru aur manzil badlo" onPress={swap} style={styles.swap}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('journey.swap')} onPress={swap} style={styles.swap}>
           <ArrowUpDown color={theme.colors.primary} size={18} />
         </Pressable>
       </View>
       <TravelModeBar />
       <View style={styles.filters}>
-        <FilterChip label="Toll mat lo" active={avoidTolls} onPress={() => setAvoidTolls(!avoidTolls)} />
-        <FilterChip label="Highway mat lo" active={avoidHighways} onPress={() => setAvoidHighways(!avoidHighways)} />
+        <FilterChip label={t('journey.avoidTolls')} active={avoidTolls} onPress={() => setAvoidTolls(!avoidTolls)} />
+        <FilterChip label={t('journey.avoidHighways')} active={avoidHighways} onPress={() => setAvoidHighways(!avoidHighways)} />
       </View>
       {limitNote ? (
         <AppText size={12} color={theme.colors.mutedForeground}>
-          {limitNote}
+          {limitCopy(limitNote)}
         </AppText>
       ) : null}
       {destination ? (
         <Pressable accessibilityRole="button" onPress={() => router.push('/destination')} style={styles.route}>
           <AppText size={13} weight="semibold" color={theme.colors.primary}>
-            Rasta dekho
+            {t('journey.seeRoute')}
           </AppText>
         </Pressable>
       ) : null}

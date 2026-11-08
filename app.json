@@ -12,7 +12,7 @@
       "supportsTablet": false,
       "icon": "./assets/images/icon.png",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Arah uses your location while the app is open to show where you are, calculate routes, and record a trip after you start one.",
+        "NSLocationWhenInUseUsageDescription": "Arah uses your location while the app is open to show where you are and calculate routes. During a trip it keeps guiding you if the screen is off, and stops when the trip ends.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -40,6 +40,7 @@
       [
         "expo-audio",
         {
+          "enableBackgroundPlayback": true,
           "microphonePermission": "Arah uses the microphone when you tap Talk to speak to the assistant.",
           "recordAudioAndroid": true
         }
@@ -55,6 +56,7 @@
       ],
       "expo-router",
       "expo-font",
+      "expo-localization",
       "expo-dev-client",
       "@maplibre/maplibre-react-native",
       [
@@ -68,10 +70,10 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Arah uses your location while the app is open to show where you are, calculate routes, and record a trip after you start one.",
+          "locationWhenInUsePermission": "Arah uses your location while the app is open to show where you are and calculate routes. During a trip it keeps guiding you if the screen is off, and stops when the trip ends.",
           "isAndroidBackgroundLocationEnabled": false,
           "isIosBackgroundLocationEnabled": false,
-          "isAndroidForegroundServiceEnabled": false
+          "isAndroidForegroundServiceEnabled": true
         }
       ],
       [
@@ -81,8 +83,7 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 220
         }
-      ],
-      "@react-native-google-signin/google-signin"
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

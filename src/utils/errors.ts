@@ -1,10 +1,6 @@
-export type AppErrorCode =
-  | 'network'
-  | 'nominatim'
-  | 'osrm'
-  | 'invalid'
-  | 'unavailable'
-  | 'permission';
+import { copy, t } from '@/i18n';
+
+export type AppErrorCode = 'network' | 'nominatim' | 'osrm' | 'invalid' | 'unavailable' | 'permission';
 
 export class AppError extends Error {
   readonly code: AppErrorCode;
@@ -16,8 +12,8 @@ export class AppError extends Error {
   }
 }
 
-export function errorMessage(error: unknown, fallback = 'Something went wrong. Try again.'): string {
-  if (error instanceof AppError) return error.message;
-  if (error instanceof Error && error.message) return error.message;
+export function errorMessage(error: unknown, fallback = t('error.generic')): string {
+  const raw = error instanceof AppError || error instanceof Error ? error.message : '';
+  if (raw) return copy(raw) ?? raw;
   return fallback;
 }

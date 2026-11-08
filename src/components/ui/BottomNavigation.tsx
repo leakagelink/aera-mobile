@@ -3,20 +3,22 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from 'expo-router/build/react-navigation/bottom-tabs';
 
+import { useT } from '@/i18n';
 import { AppText } from '@/components/ui/AppText';
 import { radius } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
 
-const items: { name: string; label: string; icon: LucideIcon }[] = [
-  { name: 'map', label: 'Map', icon: Map },
-  { name: 'trips', label: 'Safar', icon: Route },
-  { name: 'ai', label: 'Bolo', icon: MessageCircle },
-  { name: 'profile', label: 'Profile', icon: UserRound },
+const items: { name: string; label: 'nav.map' | 'nav.trips' | 'nav.talk' | 'nav.profile'; icon: LucideIcon }[] = [
+  { name: 'map', label: 'nav.map', icon: Map },
+  { name: 'trips', label: 'nav.trips', icon: Route },
+  { name: 'ai', label: 'nav.talk', icon: MessageCircle },
+  { name: 'profile', label: 'nav.profile', icon: UserRound },
 ];
 
 export function BottomNavigation({ state, navigation }: BottomTabBarProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { t } = useT();
 
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { bottom: Math.max(insets.bottom, 12) }]}>
@@ -30,7 +32,7 @@ export function BottomNavigation({ state, navigation }: BottomTabBarProps) {
             <Pressable
               key={route.key}
               accessibilityRole="tab"
-              accessibilityLabel={item.label}
+              accessibilityLabel={t(item.label)}
               accessibilityState={{ selected: active }}
               onPress={() => {
                 const event = navigation.emit({
@@ -44,7 +46,7 @@ export function BottomNavigation({ state, navigation }: BottomTabBarProps) {
             >
               <Icon color={active ? theme.colors.primary : theme.colors.mutedForeground} size={20} strokeWidth={active ? 2.5 : 1.8} />
               <AppText size={10} weight="semibold" color={active ? theme.colors.primary : theme.colors.mutedForeground}>
-                {item.label}
+                {t(item.label)}
               </AppText>
             </Pressable>
           );

@@ -11,7 +11,9 @@ import { IconButton, PrimaryButton, SecondaryButton } from '@/components/ui/Butt
 import { RouteCard } from '@/components/ui/RouteCard';
 import { ErrorState, LoadingState } from '@/components/ui/States';
 import { useForegroundLocation } from '@/features/location/useForegroundLocation';
+import { limitCopy, routeLabel } from '@/features/routing/instructions';
 import { shareEta } from '@/features/navigation/shareEta';
+import { useT } from '@/i18n';
 import { beginNavigation } from '@/features/navigation/session';
 import { useRouteTraffic } from '@/features/traffic/useRouteTraffic';
 import { useJourneyRoutes } from '@/features/routing/useJourneyRoutes';
@@ -28,6 +30,7 @@ export default function RoutesScreen() {
   useForegroundLocation(focused, 'browse');
   const router = useRouter();
   const theme = useTheme();
+  const { t } = useT();
   const insets = useSafeAreaInsets();
   const mapRef = useRef<AeraMapHandle>(null);
   const units = usePreferencesStore((state) => state.units);
@@ -54,7 +57,7 @@ export default function RoutesScreen() {
       await beginNavigation();
       router.push('/navigation');
     } catch (error) {
-      Alert.alert('Navigation nahi chali', errorMessage(error));
+      Alert.alert(t('route.failedTitle'), errorMessage(error));
     } finally {
       setStarting(false);
     }
@@ -63,7 +66,7 @@ export default function RoutesScreen() {
   if (!destination) {
     return (
       <View style={[styles.fill, { backgroundColor: theme.colors.background }]}>
-        <ErrorState title="Manzil chuno" message="Jagah dhoondo, phir rasta dekho." actionLabel="Dhoondo" onAction={() => router.replace('/search')} />
+        <ErrorState title={t('route.chooseTitle')} message={t('route.chooseBody')} actionLabel={t('route.search')} onAction={() => router.replace('/search')} />
       </View>
     );
   }
@@ -79,15 +82,15 @@ export default function RoutesScreen() {
         traffic={traffic.lines}
       />
       <View style={[styles.back, { top: insets.top + 8 }]}>
-        <IconButton icon={ArrowLeft} label="Wapas" onPress={() => router.back()} />
+        <IconButton icon={ArrowLeft} label={t('common.back')} onPress={() => router.back()} />
       </View>
       <View style={[styles.sheet, { backgroundColor: theme.colors.background, paddingBottom: insets.bottom + 12 }]}>
         <View style={styles.modes}>
           <TravelModeBar />
         </View>
-        {query.isFetching && routes.length === 0 ? <LoadingState title="Raste dekh raha hoon" message="Doori aur time nikal raha hoon." /> : null}
+        {query.isFetching && routes.length === 0 ? <LoadingState title={t('route.loadingTitle')} message={t('route.loadingBody')} /> : null}
         {query.isError && routes.length === 0 ? (
-          <ErrorState title="Rasta nahi mila" message={errorMessage(query.error)} actionLabel="Dobara" onAction={() => void query.refetch()} />
+          <ErrorState title={t('route.noneTitle')} message={errorMessage(query.error)} actionLabel={t('common.retry')} onAction={() => void query.refetch()} />
         ) : null}
         {routes.length > 0 ? (
           <>
@@ -95,7 +98,7 @@ export default function RoutesScreen() {
               {routes.map((item) => (
                 <RouteCard
                   key={item.id}
-                  label={item.label}
+                  label={routeLabel(item.label)}
                   duration={formatDuration(item.durationSeconds)}
                   detail={formatDistance(item.distanceMeters, units)}
                   summary={item.summary}
@@ -106,7 +109,7 @@ export default function RoutesScreen() {
             </ScrollView>
             {route?.limitNote ? (
               <AppText size={13} color={theme.colors.mutedForeground} style={styles.note}>
-                {route.limitNote}
+                {limitCopy(route.limitNote)}
               </AppText>
             ) : null}
             {traffic.note ? (
@@ -116,18 +119,18 @@ export default function RoutesScreen() {
             ) : null}
             {awayFromStart ? (
               <AppText size={13} color={theme.colors.mutedForeground} style={styles.note}>
-                Ye rasta {origin?.name} se shuru hota hai. Turn-by-turn ke liye Yahan se ko apni jagah karo.
+                {t('route.away', { name: origin?.name ?? '' })}
               </AppText>
             ) : null}
             <PrimaryButton icon={Navigation} disabled={!route || starting || awayFromStart} onPress={() => void start()} style={styles.start}>
-              {starting ? 'Chalu ho raha hai…' : 'Navigation chalu'}
+              {starting ? t('route.starting') : t('route.start')}
             </PrimaryButton>
             {route && destination ? (
               <SecondaryButton
                 style={styles.start}
                 onPress={() => void shareEta({ destination: destination.name, seconds: route.durationSeconds, meters: route.distanceMeters, units })}
               >
-                ETA bhejo
+                {t('map.shareEta')}
               </SecondaryButton>
             ) : null}
           </>

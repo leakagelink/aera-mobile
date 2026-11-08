@@ -1,12 +1,14 @@
+import { t } from '@/i18n';
+
 export type TravelMode = 'walk' | 'bicycle' | 'motorcycle' | 'car';
 
 export type OsrmProfile = 'foot' | 'bike' | 'driving';
 
-export const TRAVEL_MODES: { id: TravelMode; label: string }[] = [
-  { id: 'walk', label: 'Chalke' },
-  { id: 'bicycle', label: 'Cycle' },
-  { id: 'motorcycle', label: 'Bike' },
-  { id: 'car', label: 'Gaadi' },
+export const TRAVEL_MODES: { id: TravelMode; label: TravelMode }[] = [
+  { id: 'walk', label: 'walk' },
+  { id: 'bicycle', label: 'bicycle' },
+  { id: 'motorcycle', label: 'motorcycle' },
+  { id: 'car', label: 'car' },
 ];
 
 export function osrmProfile(mode: TravelMode): OsrmProfile {
@@ -16,5 +18,8 @@ export function osrmProfile(mode: TravelMode): OsrmProfile {
 }
 
 export function travelModeLabel(mode: TravelMode): string {
-  return TRAVEL_MODES.find((item) => item.id === mode)?.label ?? 'Gaadi';
+  if (mode === 'walk') return t('mode.walk');
+  if (mode === 'bicycle') return t('mode.bicycle');
+  if (mode === 'motorcycle') return t('mode.motorcycle');
+  return t('mode.car');
 }

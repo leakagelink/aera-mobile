@@ -8,12 +8,14 @@ import { routingProvider } from '@/services/providers';
 import { useHabitStore } from '@/store/habitStore';
 import { useSessionStore } from '@/store/sessionStore';
 import { radius } from '@/theme';
+import { useT } from '@/i18n';
 import { useTheme } from '@/theme/useTheme';
 import type { GeoLocation } from '@/types/location';
 import { formatDuration } from '@/utils/format';
 
 export function UsualRouteCard({ location }: { location: GeoLocation | null }) {
   const theme = useTheme();
+  const { t } = useT();
   const router = useRouter();
   const places = useHabitStore((state) => state.places);
   const legs = useHabitStore((state) => state.legs);
@@ -67,16 +69,16 @@ export function UsualRouteCard({ location }: { location: GeoLocation | null }) {
   return (
     <View style={[styles.card, { backgroundColor: theme.colors.nav, borderColor: theme.colors.glassBorder }]}>
       <AppText size={13} weight="semibold">
-        Aap {suggestion.from.name} se aksar {suggestion.to.name} jaate ho, {suggestion.trips} baar.
+        {t('habit.often', { from: suggestion.from.name, to: suggestion.to.name, count: suggestion.trips })}
       </AppText>
       <AppText size={12} color={theme.colors.mutedForeground} style={styles.copy}>
         {times
-          ? `Sabse kam time wala rasta ${formatDuration(times.fastest)}.${times.other ? ` Doosra rasta ${formatDuration(times.other)}.` : ''} Ye time abhi ke route ka hai.`
-          : 'Route ka time nikal raha hoon.'}
+          ? `${t('habit.fastest', { time: formatDuration(times.fastest) })} ${times.other ? t('habit.other', { time: formatDuration(times.other) }) : ''} ${t('habit.live')}`
+          : t('habit.loading')}
       </AppText>
       <Pressable accessibilityRole="button" onPress={go} style={styles.action}>
         <AppText size={13} weight="semibold" color={theme.colors.primary}>
-          Isi jagah chalo
+          {t('habit.go')}
         </AppText>
       </Pressable>
     </View>

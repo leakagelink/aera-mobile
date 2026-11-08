@@ -42,7 +42,7 @@ export const usePreferencesStore = create<PreferencesState>()(
     (set) => ({
       theme: 'dark',
       units: 'metric',
-      assistantLanguage: 'auto',
+      assistantLanguage: 'en',
       home: null,
       work: null,
       favorites: [],
@@ -71,7 +71,13 @@ export const usePreferencesStore = create<PreferencesState>()(
     }),
     {
       name: 'aera.preferences.v1',
+      version: 1,
       storage: createJSONStorage(() => AsyncStorage),
+      migrate: (persisted, version) => {
+        const state = persisted as { assistantLanguage?: AssistantLanguage };
+        if (version < 1 && state.assistantLanguage === 'auto') return { ...state, assistantLanguage: 'en' };
+        return state;
+      },
       partialize: (state) => ({
         theme: state.theme,
         units: state.units,

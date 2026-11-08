@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+
 export type SpokenInput = {
   arrived: boolean;
   offRoute: boolean;
@@ -9,24 +11,24 @@ export type SpokenInput = {
 };
 
 export function spokenCue(input: SpokenInput): { id: string; phrase: string } | null {
-  if (input.arrived || input.maneuverType === 'arrive') {
+  if (input.arrived || (input.maneuverType === 'arrive' && input.distanceMeters < 40)) {
     const place = input.destinationName.trim();
-    return { id: 'arrived', phrase: place ? `dekh, pahunch gaye. ${place}` : 'dekh, pahunch gaye' };
+    return { id: 'arrived', phrase: place ? t('cue.arrived', { place }) : t('cue.arrivedPlain') };
   }
   if (input.offRoute) {
-    return { id: 'off-route', phrase: 'rasta chhoot gaya. naya rasta nikal raha hoon' };
+    return { id: 'off-route', phrase: t('cue.off') };
   }
   const road = input.roadName?.trim();
   const step = `${input.maneuverType ?? ''}|${input.maneuverModifier ?? ''}|${road ?? ''}`;
   if (!isTurn(input.maneuverType, input.maneuverModifier)) {
-    const phrase = road && road.length <= 40 ? `dekh, seedha chalte raho, ${road} par` : 'dekh, seedha chalte raho';
+    const phrase = road && road.length <= 40 ? t('cue.straightRoad', { road }) : t('cue.straight');
     return { id: `straight|${step}`, phrase };
   }
   const band = distanceBand(input.distanceMeters);
   const when = distanceWords(input.distanceMeters);
   const action = maneuverWords(input.maneuverType, input.maneuverModifier);
-  const roadBit = road && road.length <= 40 ? `, ${road} par` : '';
-  const phrase = when === 'abhi' ? `dekh, abhi ${action}${roadBit}` : `dekh, ${when} ${action}${roadBit}`;
+  const roadBit = road && road.length <= 40 ? t('cue.onRoad', { road }) : '';
+  const phrase = when === 'now' ? t('cue.now', { action, road: roadBit }) : t('cue.later', { when, action, road: roadBit });
   return { id: `${step}|${band}`, phrase };
 }
 
@@ -38,36 +40,37 @@ function distanceBand(meters: number): number {
 }
 
 function distanceWords(meters: number): string {
-  if (meters < 40) return 'abhi';
+  if (meters < 40) return 'now';
   if (meters >= 1000) {
     const km = Math.round(meters / 100) / 10;
     const text = Number.isInteger(km) ? String(km) : km.toFixed(1);
-    return `${text} kilometer baad`;
+    return t('cue.km', { km: text });
   }
   const rounded = meters >= 150 ? Math.round(meters / 50) * 50 : Math.max(10, Math.round(meters / 10) * 10);
-  return `${rounded} meter baad`;
+  return t('cue.m', { meters: rounded });
 }
 
 function isTurn(type?: string, modifier?: string): boolean {
   if (type === 'arrive' || type === 'depart' || type === 'continue' || type === 'new name') return false;
+  if (modifier === 'straight' || modifier === 'ahead') return false;
   if (modifier && /left|right|uturn/i.test(modifier)) return true;
   return ['turn', 'end of road', 'fork', 'on ramp', 'off ramp', 'roundabout', 'rotary', 'roundabout turn', 'exit roundabout', 'exit rotary', 'merge'].includes(type ?? '');
 }
 
 function maneuverWords(type?: string, modifier?: string): string {
   const mod = (modifier ?? '').toLowerCase();
-  if (mod.includes('uturn')) return 'wapas mudna';
-  if (type === 'roundabout' || type === 'rotary' || type === 'roundabout turn') return 'gol chakkar lena';
-  if (type === 'exit roundabout' || type === 'exit rotary') return 'gol chakkar se nikalna';
-  if (type === 'on ramp') return 'ramp lena';
-  if (type === 'off ramp') return 'exit lena';
-  if (type === 'merge') return 'merge hona';
-  if (mod.includes('slight') && mod.includes('left')) return 'thoda left lena';
-  if (mod.includes('slight') && mod.includes('right')) return 'thoda right lena';
-  if (mod.includes('sharp') && mod.includes('left')) return 'tez left lena';
-  if (mod.includes('sharp') && mod.includes('right')) return 'tez right lena';
-  if (mod.includes('left')) return 'left lena';
-  if (mod.includes('right')) return 'right lena';
-  if (type === 'fork') return 'apni side rakhna';
-  return 'seedha chalna';
+  if (mod.includes('uturn')) return t('maneuver.uturn');
+  if (type === 'roundabout' || type === 'rotary' || type === 'roundabout turn') return t('maneuver.roundabout');
+  if (type === 'exit roundabout' || type === 'exit rotary') return t('maneuver.exitRoundabout');
+  if (type === 'on ramp') return t('maneuver.ramp');
+  if (type === 'off ramp') return t('maneuver.exit');
+  if (type === 'merge') return t('maneuver.merge');
+  if (mod.includes('slight') && mod.includes('left')) return t('maneuver.slightLeft');
+  if (mod.includes('slight') && mod.includes('right')) return t('maneuver.slightRight');
+  if (mod.includes('sharp') && mod.includes('left')) return t('maneuver.sharpLeft');
+  if (mod.includes('sharp') && mod.includes('right')) return t('maneuver.sharpRight');
+  if (mod.includes('left')) return t('maneuver.left');
+  if (mod.includes('right')) return t('maneuver.right');
+  if (type === 'fork') return t('maneuver.fork');
+  return t('maneuver.ahead');
 }

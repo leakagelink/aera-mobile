@@ -8,12 +8,14 @@ import { PrimaryButton } from '@/components/ui/Buttons';
 import { arahPolicyUrls, signInToArah } from '@/services/auth/account';
 import { signInWithGoogle } from '@/services/auth/google';
 import { registerArahNotifications } from '@/services/notifications/register';
+import { useT } from '@/i18n';
 import { font } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
 import { errorMessage } from '@/utils/errors';
 
 export default function SignInScreen() {
   const theme = useTheme();
+  const { t } = useT();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -31,7 +33,7 @@ export default function SignInScreen() {
       void registerArahNotifications().catch(() => undefined);
       router.replace('/');
     } catch (caught) {
-      setError(errorMessage(caught, 'Sign in nahi hua. Dobara try karo.'));
+      setError(errorMessage(caught, t('sign.failed')));
     } finally {
       setPending(false);
     }
@@ -41,10 +43,10 @@ export default function SignInScreen() {
     <KeyboardAvoidingView style={[styles.screen, { backgroundColor: theme.colors.background, paddingTop: insets.top + 28 }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.content}>
         <AppText size={34} weight="semibold">
-          Map se baat karo
+          {t('sign.title')}
         </AppText>
         <AppText size={15} color={theme.colors.mutedForeground} style={styles.copy}>
-          {mode === 'login' ? 'Apne Arah account se sign in karo.' : 'Naya Arah account banao. Password kam se kam 10 akshar ka ho.'}
+          {mode === 'login' ? t('sign.loginCopy') : t('sign.registerCopy')}
         </AppText>
         <TextInput
           value={email}
@@ -68,7 +70,7 @@ export default function SignInScreen() {
         />
         {error ? <AppText size={14}>{error}</AppText> : null}
         <PrimaryButton disabled={pending || email.trim().length === 0 || password.length < 10} onPress={() => void submit()}>
-          {pending ? 'Ruko' : mode === 'login' ? 'Sign in' : 'Account banao'}
+          {pending ? t('common.wait') : mode === 'login' ? t('sign.signIn') : t('sign.create')}
         </PrimaryButton>
         <PrimaryButton
           disabled={pending}
@@ -83,14 +85,14 @@ export default function SignInScreen() {
                 void registerArahNotifications().catch(() => undefined);
                 router.replace('/');
               } catch (caught) {
-                setError(errorMessage(caught, 'Google sign in nahi hua. Dobara try karo.'));
+                setError(errorMessage(caught, t('sign.googleFailed')));
               } finally {
                 setPending(false);
               }
             })();
           }}
         >
-          Google se aage badho
+          {t('sign.google')}
         </PrimaryButton>
         <PrimaryButton
           disabled={pending}
@@ -99,17 +101,17 @@ export default function SignInScreen() {
             setError(null);
           }}
         >
-          {mode === 'login' ? 'Account chahiye?' : 'Pehle se account hai?'}
+          {mode === 'login' ? t('sign.needAccount') : t('sign.haveAccount')}
         </PrimaryButton>
         <View style={styles.policies}>
           <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(arahPolicyUrls.privacy)}>
             <AppText size={13} color={theme.colors.mutedForeground}>
-              Privacy policy
+              {t('profile.privacyPolicy')}
             </AppText>
           </Pressable>
           <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(arahPolicyUrls.terms)}>
             <AppText size={13} color={theme.colors.mutedForeground}>
-              Terms
+              {t('privacy.terms')}
             </AppText>
           </Pressable>
         </View>

@@ -3,6 +3,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { useT } from '@/i18n';
 import { clearAiMemory } from '@/services/ai/chat';
 import { registerArahNotifications } from '@/services/notifications/register';
 import { geocodingProvider } from '@/services/providers';
@@ -10,16 +11,9 @@ import { useLocationStore } from '@/store/locationStore';
 import { useAccountStore } from '@/store/sessionAuthStore';
 import { usePreferencesStore, type AssistantLanguage, type SavedShortcut } from '@/store/preferencesStore';
 import { useTripStore } from '@/store/tripStore';
-import type { ThemePreference } from '@/theme';
 import { radius } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
 import type { UnitSystem } from '@/utils/format';
-
-const themes: { id: ThemePreference; label: string }[] = [
-  { id: 'dark', label: 'Andhera' },
-  { id: 'light', label: 'Ujala' },
-  { id: 'system', label: 'Phone' },
-];
 
 const units: { id: UnitSystem; label: string }[] = [
   { id: 'metric', label: 'Km' },
@@ -29,21 +23,22 @@ const units: { id: UnitSystem; label: string }[] = [
 const languages: { id: AssistantLanguage; label: string }[] = [
   { id: 'auto', label: 'Auto' },
   { id: 'en', label: 'English' },
-  { id: 'hi', label: 'Hindi' },
-  { id: 'mr', label: 'Marathi' },
-  { id: 'ta', label: 'Tamil' },
-  { id: 'te', label: 'Telugu' },
-  { id: 'bn', label: 'Bengali' },
-  { id: 'gu', label: 'Gujarati' },
-  { id: 'kn', label: 'Kannada' },
-  { id: 'ml', label: 'Malayalam' },
-  { id: 'pa', label: 'Punjabi' },
-  { id: 'ur', label: 'Urdu' },
+  { id: 'hi', label: 'हिन्दी' },
+  { id: 'mr', label: 'मराठी' },
+  { id: 'ta', label: 'தமிழ்' },
+  { id: 'te', label: 'తెలుగు' },
+  { id: 'bn', label: 'বাংলা' },
+  { id: 'gu', label: 'ગુજરાતી' },
+  { id: 'kn', label: 'ಕನ್ನಡ' },
+  { id: 'ml', label: 'മലയാളം' },
+  { id: 'pa', label: 'ਪੰਜਾਬੀ' },
+  { id: 'ur', label: 'اردو' },
 ];
 
 export default function SettingsScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const { t } = useT();
   const preference = usePreferencesStore((state) => state.theme);
   const unit = usePreferencesStore((state) => state.units);
   const language = usePreferencesStore((state) => state.assistantLanguage);
@@ -64,7 +59,7 @@ export default function SettingsScreen() {
   async function saveShortcut(kind: 'home' | 'work') {
     const current = useLocationStore.getState().current;
     if (!current) {
-      Alert.alert('Location chahiye', 'Location on karo, phir jahan ho wahan se ye jagah set karo.');
+      Alert.alert(t('settings.locationTitle'), t('settings.locationBody'));
       return;
     }
     try {
@@ -78,31 +73,39 @@ export default function SettingsScreen() {
       if (kind === 'home') setHome(shortcut);
       else setWork(shortcut);
     } catch {
-      Alert.alert('Jagah save nahi hui', 'Pata nahi mila. Dobara try karo.');
+      Alert.alert(t('settings.saveFailedTitle'), t('settings.saveFailedBody'));
     }
   }
 
   function confirmClear() {
-    Alert.alert('Safar ki list mita dein?', 'Is phone par save safar hat jayenge. Wapas nahi aayenge.', [
-      { text: 'Rehne do', style: 'cancel' },
-      { text: 'Mitao', style: 'destructive', onPress: () => void clearHistory() },
+    Alert.alert(t('settings.clearTitle'), t('settings.clearBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.delete'), style: 'destructive', onPress: () => void clearHistory() },
     ]);
   }
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
-      <ScreenHeader title="Setting" onBack={() => router.back()} />
+      <ScreenHeader title={t('settings.title')} onBack={() => router.back()} />
       <ScrollView contentContainerStyle={styles.content}>
         <AppText size={11} weight="bold" color={theme.colors.mutedForeground} style={styles.label}>
-          Dikhavat
+          {t('settings.appearance')}
         </AppText>
-        <ChoiceRow options={themes} value={preference} onChange={setTheme} />
+        <ChoiceRow
+          options={[
+            { id: 'dark', label: t('settings.dark') },
+            { id: 'light', label: t('settings.light') },
+            { id: 'system', label: t('settings.phone') },
+          ]}
+          value={preference}
+          onChange={setTheme}
+        />
         <AppText size={11} weight="bold" color={theme.colors.mutedForeground} style={styles.label}>
-          Maap
+          {t('settings.units')}
         </AppText>
         <ChoiceRow options={units} value={unit} onChange={setUnits} />
         <AppText size={11} weight="bold" color={theme.colors.mutedForeground} style={styles.label}>
-          Assistant ki bhasha
+          {t('settings.language')}
         </AppText>
         <View style={styles.languages}>
           {languages.map((option) => {
@@ -123,13 +126,13 @@ export default function SettingsScreen() {
           })}
         </View>
         <AppText size={13} color={theme.colors.mutedForeground} style={styles.note}>
-          Auto usi bhasha mein jawab deta hai jo aap likho. Chat is phone par rehti hai. Server par tabhi save hoti hai jab neeche wala switch on ho.
+          {t('settings.languageNote')}
         </AppText>
         <AppText size={11} weight="bold" color={theme.colors.mutedForeground} style={styles.label}>
-          Bachayi jagah
+          {t('settings.saved')}
         </AppText>
-        <ShortcutRow label="Ghar" place={home} onSave={() => void saveShortcut('home')} onClear={() => setHome(null)} />
-        <ShortcutRow label="Office" place={work} onSave={() => void saveShortcut('work')} onClear={() => setWork(null)} />
+        <ShortcutRow label={t('common.home')} place={home} onSave={() => void saveShortcut('home')} onClear={() => setHome(null)} />
+        <ShortcutRow label={t('common.work')} place={work} onSave={() => void saveShortcut('work')} onClear={() => setWork(null)} />
         {favorites.map((place) => (
           <Pressable
             key={`${place.latitude},${place.longitude}`}
@@ -141,7 +144,7 @@ export default function SettingsScreen() {
               {place.name}
             </AppText>
             <AppText size={13} color={theme.colors.mutedForeground}>
-              Bachayi jagah. Hatane ke liye tap karo.
+              {t('settings.favoriteRemove')}
             </AppText>
           </Pressable>
         ))}
@@ -156,14 +159,14 @@ export default function SettingsScreen() {
           style={[styles.link, { backgroundColor: theme.colors.surface }]}
         >
           <AppText size={15} weight="medium">
-            {rememberChats ? 'Chat save on hai' : 'Chat save off hai'}
+            {rememberChats ? t('settings.chatsOn') : t('settings.chatsOff')}
           </AppText>
           <AppText size={13} color={theme.colors.mutedForeground}>
-            Haal ki assistant chat server par 30 din tak rehti hai, jab tak aap ise band na karo ya account mitao.
+            {t('settings.chatsDetail')}
           </AppText>
         </Pressable>
         <AppText size={11} weight="bold" color={theme.colors.mutedForeground} style={styles.label}>
-          Gopniyata
+          {t('common.privacy')}
         </AppText>
         {signedIn ? (
           <Pressable
@@ -172,18 +175,18 @@ export default function SettingsScreen() {
             style={[styles.link, { backgroundColor: theme.colors.surface }]}
           >
             <AppText size={15} weight="medium">
-              Notification on karo
+              {t('settings.notifications')}
             </AppText>
           </Pressable>
         ) : null}
         <Pressable accessibilityRole="button" onPress={() => router.push('/privacy')} style={[styles.link, { backgroundColor: theme.colors.surface }]}>
           <AppText size={15} weight="medium">
-            Privacy aur location
+            {t('settings.privacyLocation')}
           </AppText>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={confirmClear} style={[styles.link, { backgroundColor: `${theme.colors.error}14` }]}>
           <AppText size={15} weight="semibold" color={theme.colors.error}>
-            Safar ki list mitao
+            {t('settings.clearTrips')}
           </AppText>
         </Pressable>
       </ScrollView>
@@ -193,24 +196,25 @@ export default function SettingsScreen() {
 
 function ShortcutRow({ label, place, onSave, onClear }: { label: string; place: SavedShortcut | null; onSave: () => void; onClear: () => void }) {
   const theme = useTheme();
+  const { t } = useT();
   return (
     <View style={[styles.link, { backgroundColor: theme.colors.surface }]}>
       <AppText size={15} weight="medium">
         {label}
       </AppText>
       <AppText size={13} color={theme.colors.mutedForeground}>
-        {place ? place.name : 'Set nahi hai'}
+        {place ? place.name : t('common.notSet')}
       </AppText>
       <View style={styles.shortcutActions}>
         <Pressable accessibilityRole="button" onPress={onSave}>
           <AppText size={13} weight="semibold" color={theme.colors.primary}>
-            {place ? 'Yahan se badlo' : 'Yahan se set karo'}
+            {place ? t('settings.changeHere') : t('settings.setHere')}
           </AppText>
         </Pressable>
         {place ? (
           <Pressable accessibilityRole="button" onPress={onClear}>
             <AppText size={13} weight="semibold" color={theme.colors.error}>
-              Hatao
+              {t('common.remove')}
             </AppText>
           </Pressable>
         ) : null}

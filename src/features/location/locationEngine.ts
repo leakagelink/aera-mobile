@@ -1,15 +1,32 @@
 import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
+import * as TaskManager from 'expo-task-manager';
 
+import { t } from '@/i18n';
 import { useLocationStore } from '@/store/locationStore';
 import type { GeoLocation, PermissionState } from '@/types/location';
 
 export type WatchMode = 'browse' | 'navigate';
+
+export const NAVIGATION_TASK = 'arah-navigation-location';
+
+type LocationTaskData = { locations?: Location.LocationObject[] };
+
+TaskManager.defineTask<LocationTaskData>(NAVIGATION_TASK, async ({ data, error }) => {
+  if (error) {
+    useLocationStore.setState({ availability: 'unavailable', error: 'location.unavailable' });
+    return;
+  }
+  const fix = data?.locations?.[data.locations.length - 1];
+  if (fix) publish(fix);
+});
 
 const subscribers = new Map<number, WatchMode>();
 let nextSubscriberId = 0;
 let runId = 0;
 let subscription: Location.LocationSubscription | null = null;
 let activeMode: WatchMode | null = null;
+let navigationStarted = false;
 
 export function acquireLocation(mode: WatchMode): () => void {
   const id = ++nextSubscriberId;
@@ -33,7 +50,7 @@ export async function readExistingPermission(): Promise<void> {
     useLocationStore.setState({
       permissionKnown: true,
       availability: 'unavailable',
-      error: 'Location permission could not be read.',
+      error: 'location.permissionUnread',
     });
   }
 }
@@ -45,7 +62,7 @@ export async function requestForegroundPermission(): Promise<PermissionState> {
     permission,
     canAskAgain: result.canAskAgain,
     permissionKnown: true,
-    error: permission === 'denied' ? 'Location permission is off. Arah only uses it while the app is open.' : null,
+      error: permission === 'denied' ? 'location.denied' : null,
   });
   if (permission === 'granted') void syncWatch();
   return permission;
@@ -56,7 +73,7 @@ export async function refreshLocationFix(): Promise<void> {
   if (!services) {
     useLocationStore.setState({
       availability: 'unavailable',
-      error: 'Location services are turned off in system settings.',
+      error: 'location.servicesOff',
     });
     return;
   }
@@ -66,7 +83,7 @@ export async function refreshLocationFix(): Promise<void> {
   } catch {
     useLocationStore.setState({
       availability: 'unavailable',
-      error: 'A GPS fix is not available right now.',
+      error: 'location.noFix',
     });
   }
 }
@@ -80,10 +97,11 @@ async function syncWatch(): Promise<void> {
   }
 
   const mode: WatchMode = modes.includes('navigate') ? 'navigate' : 'browse';
-  if (subscription && activeMode === mode) return;
+  if (activeMode === mode && (mode === 'navigate' ? navigationStarted : subscription)) return;
 
   subscription?.remove();
   subscription = null;
+  if (mode !== 'navigate') await stopNavigationTask();
   activeMode = mode;
 
   const servicesEnabled = await Location.hasServicesEnabledAsync();
@@ -92,7 +110,7 @@ async function syncWatch(): Promise<void> {
     useLocationStore.setState({
       availability: 'unavailable',
       watching: false,
-      error: 'Location services are turned off in system settings.',
+      error: 'location.servicesOff',
     });
     return;
   }
@@ -119,21 +137,37 @@ async function syncWatch(): Promise<void> {
     if (run !== runId) return;
     useLocationStore.setState({
       availability: 'unavailable',
-      error: 'A GPS fix is not available right now.',
+      error: 'location.noFix',
     });
   }
 
-  const options: Location.LocationOptions =
-    mode === 'navigate'
-      ? { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 1000, distanceInterval: 4 }
-      : { accuracy: Location.Accuracy.Balanced, timeInterval: 4000, distanceInterval: 10 };
+  if (mode === 'navigate') {
+    try {
+      await startNavigationTask();
+    } catch {
+      if (run === runId) {
+        useLocationStore.setState({ availability: 'unavailable', error: 'location.unavailable' });
+      }
+      return;
+    }
+    if (run !== runId) {
+      await stopNavigationTask();
+      return;
+    }
+    useLocationStore.setState({ watching: true });
+    return;
+  }
 
-  const next = await Location.watchPositionAsync(options, publish, (message) => {
-    useLocationStore.setState({
-      availability: 'unavailable',
-      error: message || 'Location is unavailable.',
-    });
-  });
+  const next = await Location.watchPositionAsync(
+    { accuracy: Location.Accuracy.Balanced, timeInterval: 4000, distanceInterval: 10 },
+    publish,
+    () => {
+      useLocationStore.setState({
+        availability: 'unavailable',
+        error: 'location.unavailable',
+      });
+    },
+  );
   if (run !== runId) {
     next.remove();
     return;
@@ -142,10 +176,38 @@ async function syncWatch(): Promise<void> {
   useLocationStore.setState({ watching: true });
 }
 
+async function startNavigationTask(): Promise<void> {
+  await Notifications.requestPermissionsAsync().catch(() => undefined);
+  const running = await Location.hasStartedLocationUpdatesAsync(NAVIGATION_TASK).catch(() => false);
+  if (!running) {
+    await Location.startLocationUpdatesAsync(NAVIGATION_TASK, {
+      accuracy: Location.Accuracy.BestForNavigation,
+      timeInterval: 1000,
+      distanceInterval: 4,
+      pausesUpdatesAutomatically: false,
+      activityType: Location.ActivityType.AutomotiveNavigation,
+      foregroundService: {
+        notificationTitle: t('guide.title'),
+        notificationBody: t('guide.body'),
+        notificationColor: '#1496E0',
+        killServiceOnDestroy: true,
+      },
+    });
+  }
+  navigationStarted = true;
+}
+
+async function stopNavigationTask(): Promise<void> {
+  navigationStarted = false;
+  const running = await Location.hasStartedLocationUpdatesAsync(NAVIGATION_TASK).catch(() => false);
+  if (running) await Location.stopLocationUpdatesAsync(NAVIGATION_TASK);
+}
+
 function stop(run: number): void {
   subscription?.remove();
   subscription = null;
   activeMode = null;
+  void stopNavigationTask();
   if (run === runId) useLocationStore.setState({ watching: false });
 }
 

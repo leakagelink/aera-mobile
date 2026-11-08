@@ -10,18 +10,20 @@ import { usePreferencesStore } from '@/store/preferencesStore';
 import { useTripStore } from '@/store/tripStore';
 import { radius } from '@/theme';
 import { useTheme } from '@/theme/useTheme';
+import { useT, type MessageKey } from '@/i18n';
 import { formatClock, formatDay, formatDistance, formatDuration, withinFilter } from '@/utils/format';
 
-const filters = [
-  { id: 'today', label: 'Aaj' },
-  { id: 'week', label: 'Hafta' },
-  { id: 'month', label: 'Mahina' },
-  { id: 'all', label: 'Sab' },
-] as const;
+const filters: { id: 'today' | 'week' | 'month' | 'all'; label: MessageKey }[] = [
+  { id: 'today', label: 'trips.today' },
+  { id: 'week', label: 'trips.week' },
+  { id: 'month', label: 'trips.month' },
+  { id: 'all', label: 'trips.all' },
+];
 
 export default function TripsScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const { t } = useT();
   const insets = useSafeAreaInsets();
   const units = usePreferencesStore((state) => state.units);
   const trips = useTripStore((state) => state.trips);
@@ -48,10 +50,10 @@ export default function TripsScreen() {
   return (
     <ScrollView style={{ backgroundColor: theme.colors.background }} contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 120, paddingHorizontal: 20 }}>
       <AppText size={34} weight="semibold">
-        Aapke safar
+        {t('trips.title')}
       </AppText>
       <AppText size={14} color={theme.colors.mutedForeground} style={styles.subtitle}>
-        Jo trip aap shuru karte ho, woh is phone par rehti hai.
+        {t('trips.subtitle')}
       </AppText>
       <View style={[styles.filters, { backgroundColor: theme.colors.secondary }]}>
         {filters.map((item) => {
@@ -59,15 +61,15 @@ export default function TripsScreen() {
           return (
             <Pressable key={item.id} accessibilityRole="button" onPress={() => setFilter(item.id)} style={[styles.filter, active && { backgroundColor: theme.colors.card }]}>
               <AppText size={12} weight="semibold" color={active ? theme.colors.foreground : theme.colors.mutedForeground}>
-                {item.label}
+                {t(item.label)}
               </AppText>
             </Pressable>
           );
         })}
       </View>
       <View style={styles.metrics}>
-        <MetricCard compact label="Doori" value={formatDistance(distance, units)} />
-        <MetricCard compact label="Time" value={formatDuration(duration)} />
+        <MetricCard compact label={t('common.distance')} value={formatDistance(distance, units)} />
+        <MetricCard compact label={t('common.time')} value={formatDuration(duration)} />
       </View>
       {compared.length === 2 ? (
         <View style={styles.compare}>
@@ -75,22 +77,22 @@ export default function TripsScreen() {
             {compared[0].destinationName} vs {compared[1].destinationName}
           </AppText>
           <AppText size={14} color={theme.colors.mutedForeground}>
-            {`${formatDistance(Math.abs(compared[0].distanceMeters - compared[1].distanceMeters), units)} doori ka farq · ${formatDuration(Math.abs(compared[0].durationSeconds - compared[1].durationSeconds))} time ka farq`}
+            {t('trips.compare', { distance: formatDistance(Math.abs(compared[0].distanceMeters - compared[1].distanceMeters), units), time: formatDuration(Math.abs(compared[0].durationSeconds - compared[1].durationSeconds)) })}
           </AppText>
         </View>
       ) : visible.length >= 2 ? (
         <AppText size={13} color={theme.colors.mutedForeground} style={styles.subtitle}>
-          Trip kholo, ya do trip chunne ke liye Chuno dabao.
+          {t('trips.compareHint')}
         </AppText>
       ) : null}
-      {!ready ? <AppText color={theme.colors.mutedForeground}>Safar load ho rahe hain…</AppText> : null}
+      {!ready ? <AppText color={theme.colors.mutedForeground}>{t('trips.loading')}</AppText> : null}
       {ready && visible.length === 0 ? (
         <View style={styles.empty}>
           <AppText size={18} weight="semibold">
-            Abhi koi safar nahi
+            {t('trips.emptyTitle')}
           </AppText>
           <AppText size={14} color={theme.colors.mutedForeground} style={styles.emptyCopy}>
-            Map se navigation chalu karo. Trip tabhi record hoti hai jab aap shuru karte ho.
+            {t('trips.emptyBody')}
           </AppText>
         </View>
       ) : null}
@@ -103,7 +105,7 @@ export default function TripsScreen() {
             <TripCard
               key={trip.id}
               title={`${trip.originName} → ${trip.destinationName}`}
-              detail={`${formatDistance(trip.distanceMeters, units)} · ${formatDuration(trip.durationSeconds)} · ${formatClock(trip.startedAt)}${trip.recovered ? ' · wapas mili' : ''}`}
+              detail={`${formatDistance(trip.distanceMeters, units)} · ${formatDuration(trip.durationSeconds)} · ${formatClock(trip.startedAt)}${trip.recovered ? ` · ${t('trips.recovered')}` : ''}`}
               onPress={() => router.push({ pathname: '/trip/[id]', params: { id: trip.id } })}
               selected={compareIds.includes(trip.id)}
               onSelect={() =>
